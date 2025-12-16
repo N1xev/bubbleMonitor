@@ -42,8 +42,7 @@ func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg
 		Padding(1, 2).
 		Width(boxWidth - 6).
 		Height(boxHeight).
-		BorderTop(false).
-		Background(bg)
+		BorderTop(false)
 
 	hint := lipgloss.NewStyle().Foreground(mu).Italic(true).Render("↑↓/jk to scroll • O or ESC to close")
 

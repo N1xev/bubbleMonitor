@@ -56,9 +56,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, AddToastCmd(fmt.Sprintf("%s Failed: %v", strings.Title(msg.Action), msg.Err), data.ToastError)
 		}
 		// App-side state tracking
-		if msg.Action == "suspend" {
+		switch msg.Action {
+		case "suspend":
 			m.SuspendedState[msg.Pid] = true
-		} else if msg.Action == "resume" {
+		case "resume":
 			delete(m.SuspendedState, msg.Pid)
 		}
 		return m, tea.Batch(process.ProcessesCmd(m.SortBy), AddToastCmd(fmt.Sprintf("Process %sd", strings.Title(msg.Action)), data.ToastSuccess))
@@ -243,6 +244,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else {
 					m.handleSettingsChange(1)
+				return m, AddToastCmd("Setting Changed", data.ToastSuccess)
 				}
 			case "-", "_", "left", "h":
 				if m.SettingsIdx < 4 {
@@ -253,6 +255,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else {
 					m.handleSettingsChange(-1)
+				return m, AddToastCmd("Setting Changed", data.ToastSuccess)
 				}
 			}
 			return m, nil

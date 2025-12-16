@@ -40,7 +40,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 			BorderForeground(p).
 			Padding(1, 2).
 			Margin(1).
-			Background(bg).
 			Foreground(t).
 			Align(lipgloss.Center)
 
@@ -97,7 +96,7 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		Bold(true).
 		Foreground(p).
 		MarginTop(1).
-		Render(headerText) + " " + "/////" + " " +
+		Render(headerText) + lipgloss.NewStyle().Foreground(mu).Render("  /////  ") +
 		lipgloss.NewStyle().Foreground(mu).Render(time.Now().Format("15:04:05"))
 
 	// Create Alert String
@@ -159,7 +158,7 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	var footer string
 	if s.Width < 130 && alertStr != "" {
 		footerLeft := lipgloss.NewStyle().Foreground(mu).Render(footerText)
-		footerContent := lipgloss.JoinHorizontal(lipgloss.Bottom, footerLeft, "  /////  ", alertStr)
+		footerContent :=  lipgloss.JoinHorizontal(lipgloss.Bottom, footerLeft, lipgloss.NewStyle().Foreground(mu).Render("  /////  "), alertStr)
 		footer = lipgloss.NewStyle().MarginBottom(1).Render(footerContent)
 	} else {
 		footer = lipgloss.NewStyle().
@@ -264,7 +263,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 				Border(border).
 				BorderForeground(lipgloss.Color(color)).
 				Padding(0, 1).
-				Background(bg).
 				Render(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(icon + " " + toast.Message))
 			toastBlocks = append(toastBlocks, block)
 		}
