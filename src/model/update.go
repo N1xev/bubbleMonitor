@@ -17,9 +17,6 @@ import (
 	"github.com/N1xev/bubbleMonitor/src/messages"
 )
 
-// KillProcessCmd attempts to kill a process
-// Defined here or move to commands?
-// If defined here it's fine as long as KillProcessMsg is imported.
 func KillProcessCmd(pid int32) tea.Cmd {
 	return func() tea.Msg {
 		proc, err := os.FindProcess(int(pid))
@@ -341,6 +338,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ChartType = "line"
 			case "line":
 				m.ChartType = "bar"
+			case "tty":
+				m.ChartType = "tty"
 			case "bar":
 				m.ChartType = "braille"
 			default:
@@ -736,7 +735,7 @@ func sortActiveTabs(active []string) []string {
 func (m *Model) handleSettingsChange(dir int) {
 	switch m.SettingsIdx {
 	case 4: // Chart Type
-		types := []string{"sparkline", "line", "bar", "braille"}
+		types := []string{"sparkline", "line", "bar", "braille", "tty"}
 		for i, t := range types {
 			if t == m.ChartType {
 				nextIdx := (i + dir + len(types)) % len(types)

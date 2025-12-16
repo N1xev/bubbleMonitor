@@ -49,14 +49,14 @@ type CustomThemeConfig struct {
 func DefaultConfig() AppConfig {
 	return AppConfig{
 		HistoryLength:    60,
-		ChartType:        "sparkline",
+		ChartType:        "braille",
 		ViewType:         "normal",
 		SortBy:           "cpu",
 		Theme:            "dark",
 		RefreshRate:      1000,
 		BorderType:       "rounded",
-		BorderStyle:      "single",
-		BackgroundOpaque: false,
+		BorderStyle:      "dashed",
+		BackgroundOpaque: true,
 		Tabs:             []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System"},
 		Thresholds: map[MetricType]float64{
 			MetricCPU:  90.0,
@@ -123,11 +123,6 @@ func LoadConfig() (AppConfig, error) {
 	// If config file existed but Tabs missing/empty, populate defaults
 	if len(config.Tabs) == 0 {
 		config.Tabs = defaults.Tabs
-		// We could save here, but maybe better to just use defaults in memory
-		// User requested: "added to config by default". So we SHOULD save.
-		// However, LoadConfig returns config. Saving here might be circular or side-effect heavy?
-		// Better to rely on app saving on exit or change.
-		// But to ensure user sees it, we must ensure it's in memory.
 	}
 	if config.Theme == "" {
 		config.Theme = defaults.Theme
