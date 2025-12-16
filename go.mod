@@ -2,6 +2,8 @@ module github.com/N1xev/bubbleMonitor
 
 go 1.25.5
 
+retract v0.1.1
+
 require (
 	charm.land/bubbletea/v2 v2.0.0-rc.2
 	charm.land/lipgloss/v2 v2.0.0-beta.3.0.20251114160003-3248589b24c9
