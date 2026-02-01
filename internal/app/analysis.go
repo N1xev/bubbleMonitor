@@ -4,7 +4,7 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
 
-func UpdateAnalysis(s *data.AppState) {
+func UpdateAnalysis(s *data.AppState, alivePids map[int32]bool) {
 	// 1. Calculate Health Score
 	score := 100
 	if s.Cpu > 90 {
@@ -67,9 +67,11 @@ func UpdateAnalysis(s *data.AppState) {
 	}
 
 	// Prune untracked history
-	alivePids := make(map[int32]bool)
-	for _, p := range s.Processes {
-		alivePids[p.Pid] = true
+	if alivePids == nil {
+		alivePids = make(map[int32]bool)
+		for _, p := range s.Processes {
+			alivePids[p.Pid] = true
+		}
 	}
 	s.PruneDeadProcessHistory(alivePids)
 }
