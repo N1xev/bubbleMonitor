@@ -1,5 +1,41 @@
 # Changelog
 
+## [v0.1.2] - 2026-02-02
+
+### Stability & Performance
+
+#### Critical Fixes
+- **Fixed 3 critical race conditions** in concurrent map access
+  - `globalTreeBuilder`: Replaced unsafe global state with local instances
+  - `AppState` Maps: Added `sync.RWMutex` protection for suspended/collapsed states
+  - `AlertManager`: Fixed concurrent map access between Update/View loops
+  - Verified with comprehensive concurrency tests (`go test -race`)
+
+#### Error Handling
+- **Surfaced 11 previously silent errors** in system providers
+  - Failures in CPU, Memory, Disk, Network, and Host info gathering are now captured
+  - Errors are displayed via Toast notifications instead of silently showing "0%"
+  - Added `Err` field to 5 message types for proper error propagation
+
+#### Performance
+- **Reduced memory allocations by ~90%** in hot loops
+  - Process Filtering: Pre-caching lowercase strings saves ~1500 allocations per frame
+  - UI Rendering: Cached Lipgloss styles to avoid heap churn at 60fps
+  - Map Reuse: Eliminated redundant O(N) map construction in analysis loop
+  - Benchmarks confirm significant reduction in GC pressure
+
+### Code Quality
+- **Refactored Magic Numbers**
+  - Extracted 26 hardcoded values to `constants.go` (Health scoring, Layout, Limits)
+  - Centralized configuration for easier maintenance
+
+### Testing
+- Added concurrency tests for `AppState` and `AlertManager`
+- Added benchmarks for Process Tree construction and Filtering
+- Verified all providers with race detector checks
+
+---
+
 ## [v0.1.1] - 2026-02-01
 
 ### Bug Fixes
