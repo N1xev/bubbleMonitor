@@ -9,9 +9,9 @@ import (
 
 // GetColorForValue returns a color based on the value threshold
 func GetColorForValue(val float64, su, w, a compat.AdaptiveColor) compat.AdaptiveColor {
-	if val < 50 {
+	if val < ProgressBarWarningThreshold {
 		return su
-	} else if val < 80 {
+	} else if val < ProgressBarCriticalThreshold {
 		return w
 	}
 	return a

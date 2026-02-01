@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/msg"
+	"github.com/N1xev/bubbleMonitor/internal/provider"
 	"github.com/shirou/gopsutil/v3/net"
 )
 
@@ -33,9 +34,9 @@ func ConnectionsCmd() tea.Cmd {
 
 func getProto(t uint32) string {
 	switch t {
-	case 1:
+	case provider.ProtoTCP:
 		return "TCP"
-	case 2:
+	case provider.ProtoUDP:
 		return "UDP"
 	default:
 		return "UNK"

@@ -15,7 +15,7 @@ import (
 var (
 	stringGridPool = sync.Pool{
 		New: func() interface{} {
-			grid := make([][]string, 0, 20)
+			grid := make([][]string, 0, InitialGridCapacity)
 			return &grid
 		},
 	}

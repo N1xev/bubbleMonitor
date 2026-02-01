@@ -3,10 +3,12 @@ package system
 import (
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/N1xev/bubbleMonitor/internal/msg"
+	"github.com/N1xev/bubbleMonitor/internal/provider"
 )
 
 func SystemLogsCmd() tea.Cmd {
@@ -15,7 +17,7 @@ func SystemLogsCmd() tea.Cmd {
 
 		if runtime.GOOS == "linux" {
 			// journalctl -n 50 --no-pager -o short-iso
-			cmd := exec.Command("journalctl", "-n", "50", "--no-pager", "-o", "short-iso")
+			cmd := exec.Command("journalctl", "-n", strconv.Itoa(provider.MaxLogLines), "--no-pager", "-o", "short-iso")
 			out, err := cmd.Output()
 			if err == nil {
 				lines := strings.Split(string(out), "\n")

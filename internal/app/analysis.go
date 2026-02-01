@@ -6,27 +6,27 @@ import (
 
 func UpdateAnalysis(s *data.AppState, alivePids map[int32]bool) {
 	// 1. Calculate Health Score
-	score := 100
-	if s.Cpu > 90 {
-		score -= 30
-	} else if s.Cpu > 70 {
-		score -= 10
+	score := data.MaxHealthScore
+	if s.Cpu > data.HealthThresholdHealthy {
+		score -= data.HealthDeductionCPUCritical
+	} else if s.Cpu > data.HealthThresholdWarning {
+		score -= data.HealthDeductionCPUHigh
 	}
 
-	if s.Memory > 95 {
-		score -= 30
-	} else if s.Memory > 80 {
-		score -= 10
+	if s.Memory > data.HealthThresholdCritical {
+		score -= data.HealthDeductionMemoryCritical
+	} else if s.Memory > data.HealthThresholdWarning {
+		score -= data.HealthDeductionMemoryHigh
 	}
 
-	if s.Disk > 95 {
-		score -= 20
+	if s.Disk > data.HealthThresholdCritical {
+		score -= data.HealthDeductionDiskCritical
 	}
 
-	if s.CpuTemp > 90 {
-		score -= 30
-	} else if s.CpuTemp > 80 {
-		score -= 10
+	if s.CpuTemp > data.HealthThresholdHealthy {
+		score -= data.HealthDeductionTempCritical
+	} else if s.CpuTemp > data.HealthThresholdWarning {
+		score -= data.HealthDeductionTempHigh
 	}
 
 	if score < 0 {
@@ -50,8 +50,8 @@ func UpdateAnalysis(s *data.AppState, alivePids map[int32]bool) {
 
 	// Track Top 5 (Assuming list is sorted by CPU, which is default)
 	// If sorted by Mem, we track top Mem consumers.
-	limit := 5
-	if len(s.Processes) < 5 {
+	limit := data.TopProcessesTrackCount
+	if len(s.Processes) < limit {
 		limit = len(s.Processes)
 	}
 	for i := 0; i < limit; i++ {

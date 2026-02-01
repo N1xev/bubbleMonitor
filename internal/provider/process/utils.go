@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
+	"github.com/N1xev/bubbleMonitor/internal/provider"
 )
 
 // --- Slice Pool ---
@@ -11,7 +12,7 @@ import (
 var procSlicePool = sync.Pool{
 	New: func() interface{} {
 		// Start with a reasonable capacity, e.g., 500
-		s := make([]data.ProcessInfo, 0, 500)
+		s := make([]data.ProcessInfo, 0, provider.ProcessListCapacity)
 		return &s
 	},
 }
@@ -21,7 +22,7 @@ var procSlicePool = sync.Pool{
 func GetProcSlice() *[]data.ProcessInfo {
 	slice, ok := procSlicePool.Get().(*[]data.ProcessInfo)
 	if !ok {
-		s := make([]data.ProcessInfo, 0, 500)
+		s := make([]data.ProcessInfo, 0, provider.ProcessListCapacity)
 		return &s
 	}
 	return slice
@@ -77,7 +78,7 @@ func (i *Interner) Intern(s string) string {
 	i.cache[s] = s
 	i.count++
 
-	if i.count%1000 == 0 && len(i.cache) > maxInternerSize {
+	if i.count%provider.InternerCleanupFrequency == 0 && len(i.cache) > maxInternerSize {
 		i.cache = make(map[string]string)
 		i.count = 0
 	}

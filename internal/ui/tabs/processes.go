@@ -20,7 +20,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 	border := widgets.GetBorder(s.BorderStyle, s.BorderType)
 
 	// Split available height: processes list (70%) + details panel (30%)
-	detailsHeight := 7
+	detailsHeight := ProcessDetailsHeight
 	listHeight := availHeight - detailsHeight - 1
 	if listHeight < 10 {
 		listHeight = 10
@@ -29,10 +29,10 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 
 	contentWidth := boxWidth - 4
 
-	pidWidth := 8
-	statusWidth := 12
-	cpuWidth := 8
-	memWidth := 8
+	pidWidth := PIDColumnWidth
+	statusWidth := StatusColumnWidth
+	cpuWidth := CPUColumnWidth
+	memWidth := MemColumnWidth
 
 	nameWidth := contentWidth - pidWidth - statusWidth - cpuWidth - memWidth - 4
 	if nameWidth < 20 {

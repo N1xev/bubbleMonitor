@@ -94,9 +94,7 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	}
 
 	// Minimum dimensions check
-	const minWidth = 100
-	const minHeight = 30
-	if s.Width < minWidth || s.Height < minHeight {
+	if s.Width < MinWindowWidth || s.Height < MinWindowHeight {
 		// Use cached styles where possible, but border might be dynamic so we update it
 		boxStyle := styleCache.box.Border(getBorder())
 
@@ -104,7 +102,7 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 			"%s\n\n%s\n%s",
 			styleCache.title.Render("WINDOW TOO SMALL"),
 			fmt.Sprintf("Current: %dx%d", s.Width, s.Height),
-			styleCache.dim.Render(fmt.Sprintf("Minimum: %dx%d", minWidth, minHeight)),
+			styleCache.dim.Render(fmt.Sprintf("Minimum: %dx%d", MinWindowWidth, MinWindowHeight)),
 		)
 
 		v := tea.NewView(lipgloss.Place(
@@ -125,15 +123,13 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	}
 
 	// Theme colors from current theme
-	theme := getColors()
-	t := theme.Text
-	mu := theme.Muted
-	bg := theme.Background
-	p := theme.Primary
-	b := theme.Border
-	// su := theme.Success
-	// w := theme.Warning
-	a := theme.Alert
+	// theme := getColors() - Already declared
+	// p := theme.Primary - Already declared
+	// t := theme.Text - Already declared
+	// bg := theme.Background - Already declared
+	// mu := theme.Muted - Already declared
+	// a := theme.Alert - Already declared
+	// b := theme.Border - Already declared
 
 	// Handle Transparency
 	if !s.BackgroundOpaque {
@@ -174,57 +170,12 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		}
 	}
 
-	// Border style
-	border := getBorder()
-
-	// Render Header with top margin
-	headerText := " BUBBLE MONITOR"
-
-	header := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(p).
-		MarginTop(1).
-		Render(headerText) + lipgloss.NewStyle().Foreground(mu).Render("  /////  ") +
-		lipgloss.NewStyle().Foreground(mu).Render(time.Now().Format("15:04:05"))
-
-	// Create Alert String
-	var alertStr string
-	if s.AlertManager != nil && s.AlertManager.HasAlerts() {
-		warnStyle := lipgloss.NewStyle().Foreground(a).Bold(true).Blink(true)
-		rawText := "  ⚠️  ALERT: "
-
-		// Append first alert message
-		alerts := s.AlertManager.GetAlerts()
-		if len(alerts) > 0 {
-			rawText += alerts[0].Message
-		}
-		alertStr = warnStyle.Render(rawText)
-	}
-
-	// Render Tabs with top margin
-	var tabBlocks []string
-	for i, titleRaw := range s.ActiveTabs {
-		title := strings.ToUpper(titleRaw)
-		if s.SelectedTab == i {
-			tabBlocks = append(tabBlocks, lipgloss.NewStyle().
-				Bold(true).
-				Foreground(p).
-				Border(border, false, false, true, false).
-				BorderForeground(p).
-				Render(" "+title+" "))
-		} else {
-			tabBlocks = append(tabBlocks, lipgloss.NewStyle().
-				Foreground(mu).
-				MarginBottom(1).
-				Render(" "+title+" "))
-		}
-	}
 	tabRow := lipgloss.NewStyle().MarginTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, tabBlocks...))
 
 	// TopBar Assembly
 	var topBar string
-	if s.Width >= 130 && alertStr != "" {
-		alertBlock := lipgloss.NewStyle().MarginTop(1).Render(alertStr)
+	if s.Width >= WideLayoutThreshold && alertStr != "" {
+		alertBlock := styleCache.warn.MarginTop(1).Render(alertStr)
 		topBar = lipgloss.JoinHorizontal(lipgloss.Top, header, "    ", tabRow, alertBlock)
 	} else {
 		topBar = lipgloss.JoinHorizontal(lipgloss.Top, header, "    ", tabRow)
