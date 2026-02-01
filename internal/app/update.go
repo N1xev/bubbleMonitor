@@ -628,6 +628,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case messages.CpuMemMsg:
+		if msg.Err != nil {
+			return m, AddToastCmd("CPU/Memory metrics error: "+msg.Err.Error(), data.ToastError)
+		}
 		m.Cpu = msg.Cpu
 		m.CpuPerCore = msg.CpuPerCore
 		m.Memory = msg.Memory
@@ -642,6 +645,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		UpdateAnalysis(&m.AppState)
 
 	case messages.DiskNetMsg:
+		if msg.Err != nil {
+			return m, AddToastCmd("Disk/Network metrics error: "+msg.Err.Error(), data.ToastError)
+		}
 		if m.LastNetSent > 0 && m.LastNetRecv > 0 {
 			m.NetSentRate = float64(msg.NetSent-m.LastNetSent) / 1024 / 1024
 			m.NetRecvRate = float64(msg.NetRecv-m.LastNetRecv) / 1024 / 1024
@@ -705,8 +711,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case messages.HostInfoMsg:
+		if msg.Err != nil {
+			return m, AddToastCmd("Host info error: "+msg.Err.Error(), data.ToastError)
+		}
 		m.HostInfo = msg.Info
 	case messages.DiskInfoMsg:
+		if msg.Err != nil {
+			return m, AddToastCmd("Disk partitions error: "+msg.Err.Error(), data.ToastError)
+		}
 		m.DiskPartitions = msg.Partitions
 	case messages.GpuInfoMsg:
 		m.GpuInfo = msg
@@ -764,6 +776,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.HistoryTemp.Push(m.CpuTemp)
 
 	case messages.NetworkInterfacesMsg:
+		if msg.Err != nil {
+			return m, AddToastCmd("Network interfaces error: "+msg.Err.Error(), data.ToastError)
+		}
 		m.NetworkInterfaces = msg.Interfaces
 		if m.LastNetworkInterfaces == nil {
 			m.LastNetworkInterfaces = make(map[string]net.IOCountersStat)
