@@ -22,14 +22,18 @@ Grab the latest binary for your system:
 
 ```bash
 # Windows
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.0/bub-windows-amd64-v0.1.0.exe -o bub.exe
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-windows-amd64-v0.1.1.exe -o bub.exe
 
 # Linux
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.0/bub-linux-amd64-v0.1.0 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-linux-amd64-v0.1.1 -o bub
+chmod +x bub
+
+# macOS (Intel)
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-darwin-amd64-v0.1.1 -o bub
 chmod +x bub
 
 # macOS (Apple Silicon)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.0/bub-darwin-arm64-v0.1.0 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-darwin-arm64-v0.1.1 -o bub
 chmod +x bub
 ```
 
@@ -38,7 +42,7 @@ Or build from source if you're feeling adventurous:
 ```bash
 git clone https://github.com/N1xev/bubbleMonitor.git
 cd bubbleMonitor
-go build -o bub main.go
+go build -o bub ./cmd/bub
 ```
 
 Then just run `./bub` and you're good to go!

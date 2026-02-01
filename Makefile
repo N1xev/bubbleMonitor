@@ -30,7 +30,7 @@ build:
 	@echo "$(BLUE)================================================$(RESET)"
 	@echo ""
 	@mkdir -p $(BUILD_DIR)
-	@$(GOBUILD) -ldflags="-s -w -X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(PROJECT_NAME)-$(shell uname | tr '[:upper:]' '[:lower:]')-$(shell uname -m)-v$(VERSION) main.go
+	@$(GOBUILD) -ldflags="-s -w -X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(PROJECT_NAME)-$(shell uname | tr '[:upper:]' '[:lower:]')-$(shell uname -m)-v$(VERSION) ./cmd/bub
 	@echo "$(GREEN)[SUCCESS]$(RESET) Built for current platform"
 
 build-all: deps clean
@@ -77,7 +77,7 @@ define build_target
 	@$(eval OUTPUT_NAME := $(PROJECT_NAME)-$(GOOS)-$(GOARCH)-v$(VERSION)$(EXT))
 	@$(eval OUTPUT_PATH := $(BUILD_DIR)/$(OUTPUT_NAME))
 	@echo "  $(BLUE)[BUILD]$(RESET) $(GOOS)/$(GOARCH) -> $(OUTPUT_NAME)"
-	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -ldflags="-s -w -X main.Version=$(VERSION)" -o $(OUTPUT_PATH) main.go 2>/dev/null
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -ldflags="-s -w -X main.Version=$(VERSION)" -o $(OUTPUT_PATH) ./cmd/bub 2>/dev/null
 	@if [ $$? -eq 0 ] && [ -f "$(OUTPUT_PATH)" ]; then \
 		$(eval SUCCESS_COUNT := $(shell echo $$(($(SUCCESS_COUNT) + 1)))) \
 		@$(eval FILE_SIZE := $(shell stat -f%z "$(OUTPUT_PATH)" 2>/dev/null || stat -c%s "$(OUTPUT_PATH)" 2>/dev/null || echo "0")) \
@@ -152,7 +152,7 @@ install: deps build
 debug:
 	@echo "$(BLUE)[INFO]$(RESET) Building with debug information..."
 	@mkdir -p $(BUILD_DIR)
-	@$(GOBUILD) -ldflags="-X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(PROJECT_NAME)-debug main.go
+	@$(GOBUILD) -ldflags="-X main.Version=$(VERSION)" -o $(BUILD_DIR)/$(PROJECT_NAME)-debug ./cmd/bub
 	@echo "$(GREEN)[SUCCESS]$(RESET) Debug build completed"
 
 help:
