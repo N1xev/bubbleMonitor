@@ -1,6 +1,7 @@
 package data
 
 import (
+	"sync"
 	"time"
 
 	"github.com/N1xev/bubbleMonitor/internal/config"
@@ -94,6 +95,7 @@ type AppState struct {
 
 	// App-side Suspend State Tracking
 	SuspendedState map[int32]bool
+	stateMu        sync.RWMutex // Protects SuspendedState, CollapsedPids, BookmarkedPids, ProcessHistory
 
 	// Open Files Inspector
 	ShowOpenFiles         bool
@@ -134,6 +136,106 @@ type AppState struct {
 	CpuCoreScrollOffset int
 
 	// Analysis & History
-	ProcessHistory map[int32]*RingBuffer // History for tracked processes
+	ProcessHistory map[int32]*RingBuffer
 	HealthScore    int
+}
+
+func (s *AppState) SetSuspended(pid int32, suspended bool) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	if suspended {
+		s.SuspendedState[pid] = true
+	} else {
+		delete(s.SuspendedState, pid)
+	}
+}
+
+func (s *AppState) IsSuspended(pid int32) bool {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.SuspendedState[pid]
+}
+
+func (s *AppState) ToggleCollapsed(pid int32) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	s.CollapsedPids[pid] = !s.CollapsedPids[pid]
+}
+
+func (s *AppState) IsCollapsed(pid int32) bool {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.CollapsedPids[pid]
+}
+
+func (s *AppState) ToggleBookmark(pid int32) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	s.BookmarkedPids[pid] = !s.BookmarkedPids[pid]
+}
+
+func (s *AppState) IsBookmarked(pid int32) bool {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.BookmarkedPids[pid]
+}
+
+func (s *AppState) ClearProcessMaps() {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	for pid := range s.SuspendedState {
+		delete(s.SuspendedState, pid)
+	}
+	for pid := range s.CollapsedPids {
+		delete(s.CollapsedPids, pid)
+	}
+	for pid := range s.BookmarkedPids {
+		delete(s.BookmarkedPids, pid)
+	}
+}
+
+func (s *AppState) PruneDeadProcessMaps(alivePids map[int32]bool) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	for pid := range s.SuspendedState {
+		if !alivePids[pid] {
+			delete(s.SuspendedState, pid)
+		}
+	}
+	for pid := range s.CollapsedPids {
+		if !alivePids[pid] {
+			delete(s.CollapsedPids, pid)
+		}
+	}
+	for pid := range s.BookmarkedPids {
+		if !alivePids[pid] {
+			delete(s.BookmarkedPids, pid)
+		}
+	}
+}
+
+func (s *AppState) GetOrCreateHistory(pid int32) *RingBuffer {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	if _, ok := s.ProcessHistory[pid]; !ok {
+		s.ProcessHistory[pid] = NewRingBuffer(s.HistoryLength)
+	}
+	return s.ProcessHistory[pid]
+}
+
+func (s *AppState) GetHistory(pid int32) (*RingBuffer, bool) {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	hist, ok := s.ProcessHistory[pid]
+	return hist, ok
+}
+
+func (s *AppState) PruneDeadProcessHistory(alivePids map[int32]bool) {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
+	for pid := range s.ProcessHistory {
+		if !alivePids[pid] {
+			delete(s.ProcessHistory, pid)
+		}
+	}
 }

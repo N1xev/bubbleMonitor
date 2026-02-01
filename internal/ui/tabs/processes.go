@@ -131,7 +131,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 
 		name := proc.Name
 
-		if s.BookmarkedPids[proc.Pid] {
+		if s.IsBookmarked(proc.Pid) {
 			name = "★ " + name
 		}
 
@@ -140,7 +140,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 				prefix := strings.Repeat("  ", level)
 
 				indicator := ""
-				if s.CollapsedPids[proc.Pid] {
+				if s.IsCollapsed(proc.Pid) {
 					indicator = "▶ "
 				} else {
 					if level > 0 {
@@ -160,7 +160,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			status = "running"
 		}
 
-		if s.SuspendedState[proc.Pid] {
+		if s.IsSuspended(proc.Pid) {
 			status = "SUSPENDED"
 		}
 
@@ -172,7 +172,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		nameCell := currCellStyle.Width(nameWidth).Render(name)
 
 		var statusStr string
-		if s.SuspendedState[proc.Pid] {
+		if s.IsSuspended(proc.Pid) {
 			warnStyle := currCellStyle.Foreground(lipgloss.Color("#F59E0B"))
 			if isSelected {
 				warnStyle = warnStyle.Background(selColor)
@@ -273,7 +273,7 @@ func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container li
 		status = "running"
 	}
 
-	if s.SuspendedState[proc.Pid] {
+	if s.IsSuspended(proc.Pid) {
 		status = "SUSPENDED"
 		statusColor = compat.AdaptiveColor{Light: lipgloss.Color("#F59E0B"), Dark: lipgloss.Color("#F59E0B")}
 	}
@@ -317,10 +317,10 @@ func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container li
 
 	// History Chart
 	var chart string
-	if hist, ok := s.ProcessHistory[proc.Pid]; ok && hist.Len() > 2 {
-		chartW := contentWidth - 14 // Subtract label width
+	hist, ok := s.GetHistory(proc.Pid)
+	if ok && hist.Len() > 2 {
+		chartW := contentWidth - 14
 		if chartW > 10 {
-			// Always use Sparkline for compactness here regardless of global setting
 			chartVal := widgets.RenderSparkline(hist, chartW, 1, p, w, 100.0)
 			chart = lipgloss.JoinHorizontal(lipgloss.Left, labelStyle.Render("CPU History: "), chartVal)
 		}

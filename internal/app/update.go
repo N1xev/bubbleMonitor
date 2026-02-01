@@ -59,9 +59,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// App-side state tracking
 		switch msg.Action {
 		case "suspend":
-			m.SuspendedState[msg.Pid] = true
+			m.SetSuspended(msg.Pid, true)
 		case "resume":
-			delete(m.SuspendedState, msg.Pid)
+			m.SetSuspended(msg.Pid, false)
 		}
 		return m, tea.Batch(process.ProcessesCmd(m.SortBy), AddToastCmd(fmt.Sprintf("Process %sd", strings.Title(msg.Action)), data.ToastSuccess))
 
@@ -285,7 +285,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				procs, _ := m.GetVisibleProcesses()
 				if m.SelectedProcess >= 0 && m.SelectedProcess < len(procs) {
 					proc := procs[m.SelectedProcess]
-					m.CollapsedPids[proc.Pid] = !m.CollapsedPids[proc.Pid]
+					m.ToggleCollapsed(proc.Pid)
 					m.InvalidateProcessCache()
 				}
 			}
@@ -414,8 +414,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				procs, _ := m.GetVisibleProcesses()
 				if m.SelectedProcess >= 0 && m.SelectedProcess < len(procs) {
 					proc := procs[m.SelectedProcess]
-					m.BookmarkedPids[proc.Pid] = !m.BookmarkedPids[proc.Pid]
-					m.InvalidateProcessCache() // Force redraw
+					m.ToggleBookmark(proc.Pid)
+					m.InvalidateProcessCache()
 				}
 			}
 		case "T":
@@ -679,21 +679,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			currentPids[p.Pid] = true
 		}
 
-		for pid := range m.SuspendedState {
-			if !currentPids[pid] {
-				delete(m.SuspendedState, pid)
-			}
-		}
-		for pid := range m.CollapsedPids {
-			if !currentPids[pid] {
-				delete(m.CollapsedPids, pid)
-			}
-		}
-		for pid := range m.BookmarkedPids {
-			if !currentPids[pid] {
-				delete(m.BookmarkedPids, pid)
-			}
-		}
+		m.PruneDeadProcessMaps(currentPids)
 
 		maxProcesses := len(allProcesses)
 		if len(allProcesses) > maxProcesses {

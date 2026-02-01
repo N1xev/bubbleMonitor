@@ -61,26 +61,15 @@ func UpdateAnalysis(s *data.AppState) {
 	// Update History for targets
 	for _, p := range s.Processes {
 		if targetPids[p.Pid] {
-			if _, ok := s.ProcessHistory[p.Pid]; !ok {
-				s.ProcessHistory[p.Pid] = data.NewRingBuffer(s.HistoryLength)
-			}
-			s.ProcessHistory[p.Pid].Push(p.Cpu)
+			hist := s.GetOrCreateHistory(p.Pid)
+			hist.Push(p.Cpu)
 		}
 	}
 
 	// Prune untracked history
-	for pid := range s.ProcessHistory {
-		found := false
-		for _, p := range s.Processes {
-			if p.Pid == pid {
-				if targetPids[pid] {
-					found = true
-				}
-				break
-			}
-		}
-		if !found {
-			delete(s.ProcessHistory, pid)
-		}
+	alivePids := make(map[int32]bool)
+	for _, p := range s.Processes {
+		alivePids[p.Pid] = true
 	}
+	s.PruneDeadProcessHistory(alivePids)
 }

@@ -107,14 +107,14 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 
 	// Create Alert String
 	var alertStr string
-	if s.AlertManager != nil && len(s.AlertManager.ActiveAlerts) > 0 {
+	if s.AlertManager != nil && s.AlertManager.HasAlerts() {
 		warnStyle := lipgloss.NewStyle().Foreground(a).Bold(true).Blink(true)
 		rawText := "  ⚠️  ALERT: "
 
 		// Append first alert message
-		for _, alert := range s.AlertManager.ActiveAlerts {
-			rawText += alert.Message
-			break
+		alerts := s.AlertManager.GetAlerts()
+		if len(alerts) > 0 {
+			rawText += alerts[0].Message
 		}
 		alertStr = warnStyle.Render(rawText)
 	}

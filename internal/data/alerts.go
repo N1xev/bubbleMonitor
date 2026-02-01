@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/N1xev/bubbleMonitor/internal/config"
@@ -19,6 +20,7 @@ type Alert struct {
 // AlertManager handles checking and storing alerts
 type AlertManager struct {
 	ActiveAlerts map[config.MetricType]Alert
+	mu           sync.RWMutex
 }
 
 // NewAlertManager creates a new alert manager
@@ -31,6 +33,9 @@ func NewAlertManager() *AlertManager {
 // CheckAlerts verifies metrics against thresholds and updates active alerts
 // Uses AppState to check metrics
 func (am *AlertManager) CheckAlerts(s *AppState) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
 	// CPU Check
 	cpuThreshold := s.Config.Thresholds[config.MetricCPU]
 	if cpuThreshold > 0 && s.Cpu > cpuThreshold {
@@ -98,4 +103,20 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 	} else {
 		delete(am.ActiveAlerts, config.MetricTemp)
 	}
+}
+
+func (am *AlertManager) GetAlerts() []Alert {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	alerts := make([]Alert, 0, len(am.ActiveAlerts))
+	for _, alert := range am.ActiveAlerts {
+		alerts = append(alerts, alert)
+	}
+	return alerts
+}
+
+func (am *AlertManager) HasAlerts() bool {
+	am.mu.RLock()
+	defer am.mu.RUnlock()
+	return len(am.ActiveAlerts) > 0
 }
