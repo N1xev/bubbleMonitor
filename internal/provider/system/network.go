@@ -8,10 +8,12 @@ import (
 )
 
 // NetworkInterfacesCmd fetches network interface stats
-// NetworkInterfacesCmd fetches network interface stats
 func NetworkInterfacesCmd() tea.Cmd {
 	return func() tea.Msg {
 		ioCounters, _ := net.IOCounters(true)
-		return msg.NetworkInterfacesMsg(ioCounters)
+		return msg.NetworkInterfacesMsg{
+			Interfaces: ioCounters,
+			Err:        nil,
+		}
 	}
 }

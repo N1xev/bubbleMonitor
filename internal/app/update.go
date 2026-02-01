@@ -705,9 +705,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case messages.HostInfoMsg:
-		m.HostInfo = msg
+		m.HostInfo = msg.Info
 	case messages.DiskInfoMsg:
-		m.DiskPartitions = msg
+		m.DiskPartitions = msg.Partitions
 	case messages.GpuInfoMsg:
 		m.GpuInfo = msg
 	case messages.DiskIOMsg:
@@ -764,7 +764,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.HistoryTemp.Push(m.CpuTemp)
 
 	case messages.NetworkInterfacesMsg:
-		m.NetworkInterfaces = msg
+		m.NetworkInterfaces = msg.Interfaces
 		if m.LastNetworkInterfaces == nil {
 			m.LastNetworkInterfaces = make(map[string]net.IOCountersStat)
 		}
@@ -773,7 +773,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Note: We don't really need to store rates in Model unless we want to graph them per interface.
 		// For now, let's just store the current counters into LastNetworkInterfaces after render?
 		// Actually, standard way is to update LastNetworkInterfaces here.
-		for _, nic := range msg {
+		for _, nic := range msg.Interfaces {
 			m.LastNetworkInterfaces[nic.Name] = nic
 		}
 

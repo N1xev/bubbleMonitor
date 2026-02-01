@@ -27,7 +27,10 @@ func DiskInfoCmd() tea.Cmd {
 				UsedPct:    usage.UsedPercent,
 			})
 		}
-		return msg.DiskInfoMsg(diskList)
+		return msg.DiskInfoMsg{
+			Partitions: diskList,
+			Err:        nil,
+		}
 	}
 }
 

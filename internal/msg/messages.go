@@ -27,6 +27,7 @@ type CpuMemMsg struct {
 	LoadAvg    *load.AvgStat
 	MemInfo    *mem.VirtualMemoryStat
 	SwapInfo   *mem.SwapMemoryStat
+	Err        error
 }
 
 // DiskNetMsg contains slow-updating metrics (Disk, Network)
@@ -34,6 +35,7 @@ type DiskNetMsg struct {
 	Disk    float64
 	NetSent uint64
 	NetRecv uint64
+	Err     error
 }
 
 type MetricsMsg struct {
@@ -51,12 +53,25 @@ type MetricsMsg struct {
 
 type ProcessesMsg []data.ProcessInfo
 type ProcessCountMsg int
-type HostInfoMsg *host.InfoStat
-type DiskInfoMsg []data.DiskPartition // Using data.DiskPartition
-type GpuInfoMsg []data.GpuInfo        // Using data.GpuInfo
+
+type HostInfoMsg struct {
+	Info *host.InfoStat
+	Err  error
+}
+
+type DiskInfoMsg struct {
+	Partitions []data.DiskPartition
+	Err        error
+}
+
+type GpuInfoMsg []data.GpuInfo
 type DiskIOMsg map[string]disk.IOCountersStat
 type TempMsg []host.TemperatureStat
-type NetworkInterfacesMsg []net.IOCountersStat
+
+type NetworkInterfacesMsg struct {
+	Interfaces []net.IOCountersStat
+	Err        error
+}
 type BatteryMsg []*battery.Battery
 type ServicesMsg []data.ServiceInfo
 type ConnectionsMsg []data.ConnectionInfo

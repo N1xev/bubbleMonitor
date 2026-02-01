@@ -16,7 +16,10 @@ import (
 func HostInfoCmd() tea.Cmd {
 	return func() tea.Msg {
 		info, _ := host.Info()
-		return msg.HostInfoMsg(info)
+		return msg.HostInfoMsg{
+			Info: info,
+			Err:  nil,
+		}
 	}
 }
 
