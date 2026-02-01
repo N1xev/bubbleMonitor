@@ -19,7 +19,12 @@ var procSlicePool = sync.Pool{
 // GetProcSlice returns a pointer to a slice from the pool.
 // The slice is reset to length 0.
 func GetProcSlice() *[]data.ProcessInfo {
-	return procSlicePool.Get().(*[]data.ProcessInfo)
+	slice, ok := procSlicePool.Get().(*[]data.ProcessInfo)
+	if !ok {
+		s := make([]data.ProcessInfo, 0, 500)
+		return &s
+	}
+	return slice
 }
 
 // PutProcSlice returns a slice to the pool.
@@ -38,7 +43,10 @@ func PutProcSlice(s *[]data.ProcessInfo) {
 type Interner struct {
 	mu    sync.RWMutex
 	cache map[string]string
+	count uint64
 }
+
+const maxInternerSize = 5000
 
 var globalInterner = &Interner{
 	cache: make(map[string]string),
@@ -61,10 +69,18 @@ func (i *Interner) Intern(s string) string {
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	// Double check
+
 	if v, ok := i.cache[s]; ok {
 		return v
 	}
+
 	i.cache[s] = s
+	i.count++
+
+	if i.count%1000 == 0 && len(i.cache) > maxInternerSize {
+		i.cache = make(map[string]string)
+		i.count = 0
+	}
+
 	return s
 }
