@@ -24,15 +24,36 @@ func TickCmd(d time.Duration) tea.Cmd {
 // FastMetricsCmd fetches fast-changing system metrics (CPU, Memory)
 func FastMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
-		cpuPercent, _ := cpu.Percent(0, false)
+		var firstErr error
+
+		cpuPercent, err := cpu.Percent(0, false)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 		cpuVal := 0.0
 		if len(cpuPercent) > 0 {
 			cpuVal = cpuPercent[0]
 		}
-		cpuPerCore, _ := cpu.Percent(0, true)
-		memInfo, _ := mem.VirtualMemory()
-		swapInfo, _ := mem.SwapMemory()
-		loadAvg, _ := load.Avg()
+
+		cpuPerCore, err := cpu.Percent(0, true)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+
+		memInfo, err := mem.VirtualMemory()
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+
+		swapInfo, err := mem.SwapMemory()
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+
+		loadAvg, err := load.Avg()
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 
 		var memUsed, swapUsed float64
 		if memInfo != nil {
@@ -50,6 +71,7 @@ func FastMetricsCmd() tea.Cmd {
 			LoadAvg:    loadAvg,
 			MemInfo:    memInfo,
 			SwapInfo:   swapInfo,
+			Err:        firstErr,
 		}
 	}
 }
@@ -57,18 +79,26 @@ func FastMetricsCmd() tea.Cmd {
 // SlowMetricsCmd fetches slow-changing system metrics (Disk, Network)
 func SlowMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
+		var firstErr error
+
 		root := "/"
 		if runtime.GOOS == "windows" {
 			root = "C:"
 		}
-		diskInfo, _ := disk.Usage(root)
+		diskInfo, err := disk.Usage(root)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 
 		diskPercent := 0.0
 		if diskInfo != nil {
 			diskPercent = diskInfo.UsedPercent
 		}
 
-		netIO, _ := net.IOCounters(false)
+		netIO, err := net.IOCounters(false)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 		var netSent, netRecv uint64
 		if len(netIO) > 0 {
 			netSent = netIO[0].BytesSent
@@ -79,6 +109,7 @@ func SlowMetricsCmd() tea.Cmd {
 			Disk:    diskPercent,
 			NetSent: netSent,
 			NetRecv: netRecv,
+			Err:     firstErr,
 		}
 	}
 }
