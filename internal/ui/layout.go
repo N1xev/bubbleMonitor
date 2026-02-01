@@ -25,18 +25,37 @@ type ViewModel interface {
 	GetAppState() *data.AppState
 }
 
+// Cached styles
+type layoutStyleCache struct {
+	theme     string
+	box       lipgloss.Style
+	title     lipgloss.Style
+	dim       lipgloss.Style
+	warn      lipgloss.Style
+	header    lipgloss.Style
+	key       lipgloss.Style
+	val       lipgloss.Style
+	activeTab lipgloss.Style
+	tab       lipgloss.Style
+}
+
+var styleCache = &layoutStyleCache{}
+
 // MainViewFromState renders the entire application UI from AppState
 func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getColors func() ThemePalette) tea.View {
-	// Minimum dimensions check
-	const minWidth = 100
-	const minHeight = 30
-	if s.Width < minWidth || s.Height < minHeight {
-		theme := getColors()
-		p := theme.Primary
-		t := theme.Text
-		bg := theme.Background
+	theme := getColors()
+	p := theme.Primary
+	t := theme.Text
+	bg := theme.Background
+	mu := theme.Muted
+	a := theme.Alert
+	b := theme.Border
 
-		boxStyle := lipgloss.NewStyle().
+	// Rebuild cache if theme changed
+	if styleCache.theme != s.Theme {
+		styleCache.theme = s.Theme
+
+		styleCache.box = lipgloss.NewStyle().
 			Border(getBorder()).
 			BorderForeground(p).
 			Padding(1, 2).
@@ -44,19 +63,48 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 			Foreground(t).
 			Align(lipgloss.Center)
 
-		titleStyle := lipgloss.NewStyle().
+		styleCache.title = lipgloss.NewStyle().
 			Foreground(p).
 			Bold(true).
 			MarginBottom(1)
 
-		dimStyle := lipgloss.NewStyle().
-			Foreground(theme.Muted)
+		styleCache.dim = lipgloss.NewStyle().
+			Foreground(mu)
+
+		styleCache.warn = lipgloss.NewStyle().Foreground(a).Bold(true).Blink(true)
+
+		styleCache.header = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(t).
+			Background(p).
+			Padding(0, 1)
+
+		styleCache.key = lipgloss.NewStyle().Foreground(p).Bold(true)
+		styleCache.val = lipgloss.NewStyle().Foreground(t)
+
+		styleCache.activeTab = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(t).
+			Background(p).
+			Padding(0, 1)
+
+		styleCache.tab = lipgloss.NewStyle().
+			Foreground(mu).
+			Padding(0, 1)
+	}
+
+	// Minimum dimensions check
+	const minWidth = 100
+	const minHeight = 30
+	if s.Width < minWidth || s.Height < minHeight {
+		// Use cached styles where possible, but border might be dynamic so we update it
+		boxStyle := styleCache.box.Border(getBorder())
 
 		msg := fmt.Sprintf(
 			"%s\n\n%s\n%s",
-			titleStyle.Render("WINDOW TOO SMALL"),
+			styleCache.title.Render("WINDOW TOO SMALL"),
 			fmt.Sprintf("Current: %dx%d", s.Width, s.Height),
-			dimStyle.Render(fmt.Sprintf("Minimum: %dx%d", minWidth, minHeight)),
+			styleCache.dim.Render(fmt.Sprintf("Minimum: %dx%d", minWidth, minHeight)),
 		)
 
 		v := tea.NewView(lipgloss.Place(
@@ -90,6 +138,40 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	// Handle Transparency
 	if !s.BackgroundOpaque {
 		bg = compat.AdaptiveColor{Light: lipgloss.NoColor{}, Dark: lipgloss.NoColor{}}
+	}
+
+	// Border style
+	border := getBorder()
+
+	// Render Header with top margin
+	headerText := " BUBBLE MONITOR"
+	header := styleCache.header.Render(headerText)
+
+	// Add time
+	header += " " + styleCache.dim.Render(time.Now().Format("15:04:05"))
+
+	// Create Alert String
+	var alertStr string
+	if s.AlertManager != nil && s.AlertManager.HasAlerts() {
+		rawText := "  ⚠️  ALERT: "
+
+		// Append first alert message
+		alerts := s.AlertManager.GetAlerts()
+		if len(alerts) > 0 {
+			rawText += alerts[0].Message
+		}
+		alertStr = styleCache.warn.Render(rawText)
+	}
+
+	// Render Tabs with top margin
+	var tabBlocks []string
+	for i, titleRaw := range s.ActiveTabs {
+		title := strings.ToUpper(titleRaw)
+		if i == s.SelectedTab {
+			tabBlocks = append(tabBlocks, styleCache.activeTab.Render(title))
+		} else {
+			tabBlocks = append(tabBlocks, styleCache.tab.Render(title))
+		}
 	}
 
 	// Border style
