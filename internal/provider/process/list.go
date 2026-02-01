@@ -1,0 +1,166 @@
+package process
+
+import (
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/shirou/gopsutil/v3/process"
+
+	"github.com/N1xev/bubbleMonitor/internal/data"
+	"github.com/N1xev/bubbleMonitor/internal/msg"
+)
+
+// CachedProcessInfo stores the actual process object and its static data
+type CachedProcessInfo struct {
+	Proc       *process.Process // Persistent object for accurate CPU deltas
+	Name       string
+	Username   string
+	Cmdline    string
+	CreateTime int64
+	Nice       int32
+	Ppid       int32
+}
+
+var (
+	// processCache stores static info by PID
+	processCache = make(map[int32]*CachedProcessInfo)
+	cacheMutex   sync.RWMutex
+	isFetching   atomic.Bool
+)
+
+// ProcessesCmd fetches running processes and sorts them
+func ProcessesCmd(sortBy string) tea.Cmd {
+	return func() tea.Msg {
+		// Prevent concurrent execution to avoid race conditions on *process.Process
+		// and unbounded goroutine growth.
+		if !isFetching.CompareAndSwap(false, true) {
+			return nil
+		}
+		defer isFetching.Store(false)
+
+		pids, err := process.Pids()
+		if err != nil {
+			return msg.ProcessesMsg{}
+		}
+
+		// Use slice pool to reduce allocation
+		// Note: We don't Put back here. The receiver (Update loop) is responsible for recycling
+		// the previous slice once it's replaced.
+		procListPtr := GetProcSlice()
+		procList := *procListPtr
+		// Ensure capacity
+		if cap(procList) < len(pids) {
+			procList = make([]data.ProcessInfo, 0, len(pids))
+		}
+
+		currentPids := make(map[int32]bool, len(pids))
+
+		for _, pid := range pids {
+			currentPids[pid] = true
+
+			cacheMutex.RLock()
+			cached, exists := processCache[pid]
+			cacheMutex.RUnlock()
+
+			if !exists {
+				newProc, err := process.NewProcess(pid)
+				if err != nil {
+					continue
+				}
+
+				name, _ := newProc.Name()
+				username, _ := newProc.Username()
+				createTime, _ := newProc.CreateTime()
+				cmdline, _ := newProc.Cmdline()
+				nice, _ := newProc.Nice()
+				ppid, _ := newProc.Ppid()
+
+				// Intern strings to save memory
+				cached = &CachedProcessInfo{
+					Proc:       newProc,
+					Name:       Intern(name),
+					Username:   Intern(username),
+					Cmdline:    cmdline, // Don't intern cmdline (unique)
+					CreateTime: createTime,
+					Nice:       nice,
+					Ppid:       ppid,
+				}
+
+				cacheMutex.Lock()
+				processCache[pid] = cached
+				cacheMutex.Unlock()
+			}
+
+			// Fetch dynamic data
+			// CPUPercent acts on the persistent object (cached.Proc)
+			// This is safe now because isFetching guarantees only one goroutine touches it at a time.
+			cpuPercent, _ := cached.Proc.CPUPercent()
+			memPercent, _ := cached.Proc.MemoryPercent()
+			status, _ := cached.Proc.Status()
+			memInfo, _ := cached.Proc.MemoryInfo()
+
+			var memBytes uint64
+			if memInfo != nil {
+				memBytes = memInfo.RSS
+			}
+
+			statusStr := strings.Join(status, ",")
+			if statusStr == "" {
+				statusStr = "running"
+			}
+			statusStr = Intern(statusStr)
+
+			procList = append(procList, data.ProcessInfo{
+				Name:        cached.Name,
+				Pid:         pid,
+				Cpu:         cpuPercent,
+				Memory:      float64(memPercent),
+				Status:      statusStr,
+				Username:    cached.Username,
+				CreateTime:  cached.CreateTime,
+				Cmdline:     cached.Cmdline,
+				MemoryBytes: memBytes,
+				Nice:        cached.Nice,
+				Ppid:        cached.Ppid,
+			})
+		}
+
+		// Prune dead processes
+		cacheMutex.Lock()
+		for pid := range processCache {
+			if !currentPids[pid] {
+				delete(processCache, pid)
+			}
+		}
+		cacheMutex.Unlock()
+
+		sort.Slice(procList, func(i, j int) bool {
+			switch sortBy {
+			case "cpu":
+				return procList[i].Cpu > procList[j].Cpu
+			case "memory":
+				return procList[i].Memory > procList[j].Memory
+			case "pid":
+				return procList[i].Pid > procList[j].Pid
+			default:
+				return false
+			}
+		})
+
+		return msg.ProcessesMsg(procList)
+	}
+}
+
+// ProcessCountCmd only fetches the number of running processes (Lightweight)
+func ProcessCountCmd() tea.Cmd {
+	return func() tea.Msg {
+		pids, err := process.Pids()
+		if err != nil {
+			return msg.ProcessCountMsg(0)
+		}
+		return msg.ProcessCountMsg(len(pids))
+	}
+}
