@@ -17,6 +17,11 @@ type ProcessInfo struct {
 	MemoryBytes uint64
 	Nice        int32 // Priority
 	Ppid        int32 // Parent PID
+
+	// Cached lowercase fields for filtering performance
+	NameLower     string
+	UsernameLower string
+	CmdlineLower  string
 }
 
 // ProcessSnapshot stores a point-in-time resource snapshot for a process

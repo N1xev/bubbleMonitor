@@ -15,13 +15,15 @@ import (
 
 // CachedProcessInfo stores the actual process object and its static data
 type CachedProcessInfo struct {
-	Proc       *process.Process // Persistent object for accurate CPU deltas
-	Name       string
-	Username   string
-	Cmdline    string
-	CreateTime int64
-	Nice       int32
-	Ppid       int32
+	Proc          *process.Process // Persistent object for accurate CPU deltas
+	Name          string
+	Username      string
+	Cmdline       string
+	CreateTime    int64
+	Nice          int32
+	Ppid          int32
+	NameLower     string
+	UsernameLower string
 }
 
 var (
@@ -79,14 +81,19 @@ func ProcessesCmd(sortBy string) tea.Cmd {
 				ppid, _ := newProc.Ppid()
 
 				// Intern strings to save memory
+				nameInterned := Intern(name)
+				usernameInterned := Intern(username)
+
 				cached = &CachedProcessInfo{
-					Proc:       newProc,
-					Name:       Intern(name),
-					Username:   Intern(username),
-					Cmdline:    cmdline, // Don't intern cmdline (unique)
-					CreateTime: createTime,
-					Nice:       nice,
-					Ppid:       ppid,
+					Proc:          newProc,
+					Name:          nameInterned,
+					Username:      usernameInterned,
+					Cmdline:       cmdline, // Don't intern cmdline (unique)
+					CreateTime:    createTime,
+					Nice:          nice,
+					Ppid:          ppid,
+					NameLower:     strings.ToLower(name),
+					UsernameLower: strings.ToLower(username),
 				}
 
 				cacheMutex.Lock()
@@ -114,17 +121,20 @@ func ProcessesCmd(sortBy string) tea.Cmd {
 			statusStr = Intern(statusStr)
 
 			procList = append(procList, data.ProcessInfo{
-				Name:        cached.Name,
-				Pid:         pid,
-				Cpu:         cpuPercent,
-				Memory:      float64(memPercent),
-				Status:      statusStr,
-				Username:    cached.Username,
-				CreateTime:  cached.CreateTime,
-				Cmdline:     cached.Cmdline,
-				MemoryBytes: memBytes,
-				Nice:        cached.Nice,
-				Ppid:        cached.Ppid,
+				Name:          cached.Name,
+				Pid:           pid,
+				Cpu:           cpuPercent,
+				Memory:        float64(memPercent),
+				Status:        statusStr,
+				Username:      cached.Username,
+				CreateTime:    cached.CreateTime,
+				Cmdline:       cached.Cmdline,
+				MemoryBytes:   memBytes,
+				Nice:          cached.Nice,
+				Ppid:          cached.Ppid,
+				NameLower:     cached.NameLower,
+				UsernameLower: cached.UsernameLower,
+				CmdlineLower:  strings.ToLower(cached.Cmdline), // Computed here as Cmdline isn't cached efficiently
 			})
 		}
 

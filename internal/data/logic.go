@@ -99,9 +99,9 @@ func (s *AppState) GetFilteredProcesses() []ProcessInfo {
 	var filtered []ProcessInfo
 	filterLower := strings.ToLower(s.ProcessFilter)
 	for _, p := range s.Processes {
-		if strings.Contains(strings.ToLower(p.Name), filterLower) ||
-			strings.Contains(strings.ToLower(p.Username), filterLower) ||
-			strings.Contains(strings.ToLower(p.Cmdline), filterLower) ||
+		if strings.Contains(p.NameLower, filterLower) ||
+			strings.Contains(p.UsernameLower, filterLower) ||
+			strings.Contains(p.CmdlineLower, filterLower) ||
 			strings.Contains(fmt.Sprintf("%d", p.Pid), filterLower) {
 			filtered = append(filtered, p)
 		}

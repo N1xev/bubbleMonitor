@@ -34,12 +34,15 @@ func BenchmarkGetFilteredProcesses(b *testing.B) {
 	state.Processes = make([]ProcessInfo, 500)
 	for i := 0; i < 500; i++ {
 		state.Processes[i] = ProcessInfo{
-			Pid:      int32(i + 1),
-			Name:     "test_process",
-			Username: "user",
-			Cmdline:  "/usr/bin/test",
-			Cpu:      50.0,
-			Memory:   30.0,
+			Pid:           int32(i + 1),
+			Name:          "Test_Process",
+			Username:      "User_Name",
+			Cmdline:       "/usr/bin/Test_Command",
+			NameLower:     "test_process",
+			UsernameLower: "user_name",
+			CmdlineLower:  "/usr/bin/test_command",
+			Cpu:           50.0,
+			Memory:        30.0,
 		}
 	}
 
