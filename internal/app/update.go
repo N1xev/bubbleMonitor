@@ -493,10 +493,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "?":
 			m.ShowHelp = true
 			m.LastError = ""
-			m.LastError = ""
-			m.LastError = ""
 
-		// Process navigation (only on Processes tab)
+			// Process navigation (only on Processes tab)
 		case "j", "down":
 			if currentTab == "Processes" {
 				// Use visible processes (tree aware)
