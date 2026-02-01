@@ -1,6 +1,10 @@
 package data
 
+import "sync"
+
 type RingBuffer struct {
+	mu sync.RWMutex // Protects all fields below
+
 	data   []float64
 	curr   int
 	length int
@@ -21,6 +25,9 @@ func NewRingBuffer(size int) *RingBuffer {
 }
 
 func (r *RingBuffer) Push(val float64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	oldVal := r.data[r.curr]
 	r.data[r.curr] = val
 
@@ -50,10 +57,15 @@ func (r *RingBuffer) Push(val float64) {
 }
 
 func (r *RingBuffer) Len() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	return r.length
 }
 
 func (r *RingBuffer) Get(i int) float64 {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if r.length == 0 {
 		return 0
 	}
@@ -69,6 +81,9 @@ func (r *RingBuffer) Get(i int) float64 {
 }
 
 func (r *RingBuffer) Max() float64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if r.length == 0 {
 		return 0
 	}
@@ -98,6 +113,9 @@ func (r *RingBuffer) Max() float64 {
 }
 
 func (r *RingBuffer) Avg() float64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	if r.length == 0 {
 		return 0
 	}
