@@ -133,3 +133,37 @@ BenchmarkGetFilteredProcesses-8   9302 ops   173386 ns/op   130833 B/op     10 a
 - Lower CPU usage
 - Reduced memory footprint
 - No crashes from concurrent access
+
+---
+
+## v0.1.2 Baseline Benchmarks (Code Quality Improvements)
+
+**Captured**: 2026-02-02 00:40:00  
+**Platform**: Linux/amd64, Intel Core i5-8250U @ 1.60GHz  
+**Go Version**: 1.25.5
+
+### Benchmark Results (Before Code Quality Improvements)
+
+| Benchmark | ns/op | B/op | allocs/op | Notes |
+|-----------|-------|------|-----------|-------|
+| BenchmarkBuildProcessTree-8 | 420,140 | 181,648 | 328 | Process tree construction |
+| BenchmarkGetFilteredProcesses-8 | 135,684 | 130,832 | 10 | **TARGET FOR strings.ToLower optimization** |
+| BenchmarkRingBufferPush-8 | 75.95 | 0 | 0 | Thread-safe ring buffer (already optimal) |
+| BenchmarkRingBufferConcurrentAccess-8 | 2,064 | 0 | 0 | Concurrent access (mutex protected) |
+
+### Performance Targets for v0.1.2
+
+- **Error Handling**: Capture 11 silent errors without performance regression
+- **Task 8**: GetFilteredProcesses optimization - Expect 20-40% reduction in ns/op due to pre-lowercased strings
+- **Task 9**: Lipgloss style caching - Minimal benchmark impact (View loop, not measured here)
+- **Task 10**: Remove redundant alivePids - Expect 5-10% reduction in UpdateAnalysis (not benchmarked separately)
+
+### Acceptance Threshold
+
+**10% regression tolerance** - No optimization should increase baseline by more than 10%.
+
+---
+
+## Post-Optimization Results (v0.1.2)
+
+_(To be filled after all code quality improvements complete)_
