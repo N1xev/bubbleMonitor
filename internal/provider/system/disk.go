@@ -11,11 +11,11 @@ import (
 // DiskInfoCmd fetches disk partition information
 func DiskInfoCmd() tea.Cmd {
 	return func() tea.Msg {
-		partitions, _ := disk.Partitions(false)
+		partitions, err := disk.Partitions(false)
 		var diskList []data.DiskPartition
 		for _, p := range partitions {
-			usage, err := disk.Usage(p.Mountpoint)
-			if err != nil {
+			usage, usageErr := disk.Usage(p.Mountpoint)
+			if usageErr != nil {
 				continue
 			}
 			diskList = append(diskList, data.DiskPartition{
@@ -29,7 +29,7 @@ func DiskInfoCmd() tea.Cmd {
 		}
 		return msg.DiskInfoMsg{
 			Partitions: diskList,
-			Err:        nil,
+			Err:        err,
 		}
 	}
 }
