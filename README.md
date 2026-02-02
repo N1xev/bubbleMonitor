@@ -22,18 +22,18 @@ Grab the latest binary for your system:
 
 ```bash
 # Windows
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-windows-amd64-v0.1.1.exe -o bub.exe
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-windows-amd64-v0.1.4.exe -o bub.exe
 
 # Linux
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-linux-amd64-v0.1.1 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-linux-amd64-v0.1.4 -o bub
 chmod +x bub
 
 # macOS (Intel)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-darwin-amd64-v0.1.1 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-darwin-amd64-v0.1.4 -o bub
 chmod +x bub
 
 # macOS (Apple Silicon)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.1/bub-darwin-arm64-v0.1.1 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-darwin-arm64-v0.1.4 -o bub
 chmod +x bub
 ```
 
@@ -112,3 +112,4 @@ GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 ---
 
 **Made with ❤️ by [Alaa Elsamouly](https://github.com/N1xev)**
+
