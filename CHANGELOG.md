@@ -1,5 +1,28 @@
 # Changelog
 
+## [v0.1.3] - 2026-02-02
+
+### Features
+- **Normalized CPU Usage** (User Request)
+  - Added option to toggle between **Raw** (total usage, can exceed 100%) and **Normalized** (0-100%, divided by core count)
+  - Added `n` keybinding for quick toggling
+  - Added "Process CPU" toggle to Settings menu
+  - Solves confusion around processes showing >100% usage on multi-core systems
+
+### Performance
+- **Optimized UI Rendering**
+  - Pre-allocated styles in process list to avoid thousands of allocations per frame
+  - Significantly smoother rendering on high-refresh terminals
+- **Optimized Update Loop**
+  - Split analysis logic to avoid redundant calculations
+  - Reduced CPU overhead of background monitoring
+
+### Fixes
+- **Process History Leak**: Fixed potential memory leak where dead processes weren't pruned from history
+- **Analysis Redundancy**: Eliminated duplicate history updates
+
+---
+
 ## [v0.1.2] - 2026-02-02
 
 ### Stability & Performance
