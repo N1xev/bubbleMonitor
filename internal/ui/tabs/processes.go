@@ -350,7 +350,7 @@ func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container li
 	if ok && hist.Len() > 2 {
 		chartW := contentWidth - 14
 		if chartW > 10 {
-			chartVal := widgets.RenderSparkline(hist, chartW, 1, p, w, 100.0)
+			chartVal := widgets.RenderSparkline(hist, chartW, 1, p, w, 100.0, s.Theme)
 			chart = lipgloss.JoinHorizontal(lipgloss.Left, labelStyle.Render("CPU History: "), chartVal)
 		}
 	}

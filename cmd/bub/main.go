@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,6 +12,11 @@ import (
 )
 
 func main() {
+	go func() {
+		log.Println("pprof listening on http://localhost:8080")
+		log.Println(http.ListenAndServe("localhost:8080", nil))
+	}()
+
 	p := tea.NewProgram(app.InitialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)

@@ -107,12 +107,12 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	renderChart := func(data data.Accessor, chartW, chartH int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 		switch app.ChartType {
 		case "line":
-			return widgets.RenderLineChart(data, chartW, chartH, c1, c2, fixedMax)
+			return widgets.RenderLineChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
 		case "bar":
-			return widgets.RenderBarChart(data, chartW, chartH, c1, c2, fixedMax)
+			return widgets.RenderBarChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
 		default:
 			// Default to Braille (highest resolution)
-			return widgets.RenderBrailleChart(data, chartW, chartH, c1, c2, fixedMax)
+			return widgets.RenderBrailleChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
 		}
 	}
 
