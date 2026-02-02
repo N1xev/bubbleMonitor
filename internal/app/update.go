@@ -254,7 +254,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "-", "_", "left", "h":
 				if m.SettingsIdx < 4 {
-					// Threshold adjustment
 					curr := m.Config.Thresholds[m.SettingsSel]
 					if curr > 0 {
 						m.Config.Thresholds[m.SettingsSel] = curr - 1
@@ -299,7 +298,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, AddToastCmd("CPU Mode: "+status, data.ToastInfo)
 		}
 
-		// Normal key handling
 		currentTab := "Overview"
 		if m.SelectedTab < len(m.ActiveTabs) {
 			currentTab = m.ActiveTabs[m.SelectedTab]
@@ -310,7 +308,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.ActiveTabs) > 0 {
 				m.SelectedTab = (m.SelectedTab + 1) % len(m.ActiveTabs)
 			}
-			// Reset process selection when leaving processes tab
 			if len(m.ActiveTabs) > 0 && currentTab != "Processes" && m.ActiveTabs[m.SelectedTab] != "Processes" {
 				m.SelectedProcess = 0
 				m.ProcessScrollOffset = 0
@@ -335,13 +332,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			default:
 				m.HistoryLength = 60
 			}
-			// Update config
-			// Update config
 			m.Config.HistoryLength = m.HistoryLength
 			// Resize Ring Buffers
-			// Note: We lose history on resize for simplicity, or we could copy.
-			// Given this is a rare action, resetting is acceptable or we should implement Resize on RingBuffer.
-			// Let's re-allocate for now.
 			m.CpuHistory = data.NewRingBuffer(m.HistoryLength)
 			m.MemHistory = data.NewRingBuffer(m.HistoryLength)
 			m.NetHistory = data.NewRingBuffer(m.HistoryLength)
@@ -489,7 +481,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "p":
 			m.Paused = !m.Paused
 		case "r":
-			// Re-import system commands here or use package alias
 			return m, tea.Batch(
 				system.FastMetricsCmd(),
 				process.ProcessesCmd(m.SortBy),
@@ -510,7 +501,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				if filteredLen > 0 && m.SelectedProcess < filteredLen-1 {
 					m.SelectedProcess++
-					// Scroll if needed
 					visibleRows := m.getVisibleProcessRows()
 					if m.SelectedProcess >= m.ProcessScrollOffset+visibleRows {
 						m.ProcessScrollOffset = m.SelectedProcess - visibleRows + 1
@@ -521,14 +511,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if currentTab == "Processes" {
 				if m.SelectedProcess > 0 {
 					m.SelectedProcess--
-					// Scroll if needed
 					if m.SelectedProcess < m.ProcessScrollOffset {
 						m.ProcessScrollOffset = m.SelectedProcess
 					}
 				}
 			}
 		case "K":
-			// Kill process (capital K)
 			if currentTab == "Processes" && len(m.Processes) > 0 {
 				filtered := m.GetFilteredProcesses()
 				if m.SelectedProcess < len(filtered) {
@@ -539,7 +527,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case "f":
-			// Toggle filter mode
 			if currentTab == "Processes" {
 				m.FilterMode = true
 			}
@@ -551,13 +538,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.InvalidateProcessCache()
 			}
 		case "g":
-			// Go to top
 			if currentTab == "Processes" {
 				m.SelectedProcess = 0
 				m.ProcessScrollOffset = 0
 			}
 		case "G":
-			// Go to bottom
 			if currentTab == "Processes" {
 				filteredLen := m.getFilteredProcessCount()
 				if filteredLen > 0 {
@@ -571,7 +556,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case messages.TickMsg:
-		// Check for alerts every tick
 		if m.AlertManager != nil {
 			m.AlertManager.CheckAlerts(&m.AppState)
 		}
@@ -581,7 +565,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			system.TickCmd(time.Duration(m.RefreshRate) * time.Millisecond),
 		}
 
-		// Always update fast metrics (CPU/Mem)
 		cmds = append(cmds, system.FastMetricsCmd())
 
 		currentTab := "Overview"
@@ -643,8 +626,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Memory = msg.Memory
 		m.Swap = msg.Swap
 		m.LoadAvg = msg.LoadAvg
-		m.MemInfo = msg.MemInfo   // Cache for render
-		m.SwapInfo = msg.SwapInfo // Cache for render
+		m.MemInfo = msg.MemInfo
+		m.SwapInfo = msg.SwapInfo
 
 		m.CpuHistory.Push(m.Cpu)
 		m.MemHistory.Push(m.Memory)
@@ -731,12 +714,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.GpuInfoMsg:
 		m.GpuInfo = msg
 	case messages.DiskIOMsg:
-		// Calculate rates
 		if len(m.LastDiskIO) > 0 {
 			var totalRead, totalWrite uint64
 			var lastTotalRead, lastTotalWrite uint64
 
-			// Sum up all partitions/disks
 			for k, v := range msg {
 				totalRead += v.ReadBytes
 				totalWrite += v.WriteBytes
@@ -746,7 +727,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			// Calculate MB/s (assuming 1 second interval)
 			if totalRead >= lastTotalRead {
 				m.DiskReadRate = float64(totalRead-lastTotalRead) / 1024 / 1024
 			}
@@ -754,7 +734,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DiskWriteRate = float64(totalWrite-lastTotalWrite) / 1024 / 1024
 			}
 
-			// Update history
 			m.DiskHORead.Push(m.DiskReadRate)
 			m.DiskHOWrite.Push(m.DiskWriteRate)
 		}
@@ -792,10 +771,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.LastNetworkInterfaces = make(map[string]net.IOCountersStat)
 		}
 
-		// Update map for next rate calculation
-		// Note: We don't really need to store rates in Model unless we want to graph them per interface.
-		// For now, let's just store the current counters into LastNetworkInterfaces after render?
-		// Actually, standard way is to update LastNetworkInterfaces here.
 		for _, nic := range msg.Interfaces {
 			m.LastNetworkInterfaces[nic.Name] = nic
 		}
@@ -857,7 +832,6 @@ func sortActiveTabs(active []string) []string {
 }
 
 // handleSettingsChange handles non-threshold settings updates
-// dir: 1 for forward (Right/K/...), -1 for backward (Left/J/...)
 func (m *Model) handleSettingsChange(dir int) {
 	switch m.SettingsIdx {
 	case 4: // Chart Type
@@ -912,7 +886,6 @@ func (m *Model) handleSettingsChange(dir int) {
 		if tabIdx >= 0 && tabIdx < len(allTabs) {
 			targetTab := allTabs[tabIdx]
 
-			// Check if active
 			idxInActive := -1
 			for i, t := range m.ActiveTabs {
 				if t == targetTab {
@@ -922,10 +895,8 @@ func (m *Model) handleSettingsChange(dir int) {
 			}
 
 			if idxInActive >= 0 {
-				// Remove
 				m.ActiveTabs = append(m.ActiveTabs[:idxInActive], m.ActiveTabs[idxInActive+1:]...)
 			} else {
-				// Add
 				m.ActiveTabs = append(m.ActiveTabs, targetTab)
 				m.ActiveTabs = sortActiveTabs(m.ActiveTabs)
 			}

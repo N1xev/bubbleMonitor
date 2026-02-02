@@ -5,7 +5,6 @@ import (
 )
 
 func UpdateHealthScore(s *data.AppState) {
-	// 1. Calculate Health Score
 	score := data.MaxHealthScore
 	if s.Cpu > data.HealthThresholdHealthy {
 		score -= data.HealthDeductionCPUCritical
@@ -36,22 +35,18 @@ func UpdateHealthScore(s *data.AppState) {
 }
 
 func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
-	// 2. Track Process History (Top 5 + Selected)
-	// Only if we have processes
 	if len(s.Processes) == 0 {
 		return
 	}
 
 	targetPids := make(map[int32]bool)
 
-	// Track Selected
 	if s.SelectedProcess >= 0 && s.SelectedProcess < len(s.Processes) {
 		pid := s.Processes[s.SelectedProcess].Pid
 		targetPids[pid] = true
 	}
 
-	// Track Top 5 (Assuming list is sorted by CPU, which is default)
-	// If sorted by Mem, we track top Mem consumers.
+	// Track top consumers (CPU by default)
 	limit := data.TopProcessesTrackCount
 	if len(s.Processes) < limit {
 		limit = len(s.Processes)
@@ -60,7 +55,6 @@ func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
 		targetPids[s.Processes[i].Pid] = true
 	}
 
-	// Update History for targets
 	for _, p := range s.Processes {
 		if targetPids[p.Pid] {
 			hist := s.GetOrCreateHistory(p.Pid)
@@ -68,7 +62,5 @@ func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
 		}
 	}
 
-	// Prune untracked history
-	// alivePids is guaranteed to be non-nil by caller (ProcessesMsg)
 	s.PruneDeadProcessHistory(alivePids)
 }

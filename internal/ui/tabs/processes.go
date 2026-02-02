@@ -127,7 +127,6 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		return styleHigh
 	}
 
-	// Row styles
 	rowStyle := lipgloss.NewStyle().Width(contentWidth)
 	rowStyleSel := selectedStyle.Width(contentWidth)
 
@@ -142,7 +141,6 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			selectedProc = &proc
 		}
 
-		// Select pre-allocated styles
 		var pStyle, nStyle, sStyle lipgloss.Style
 		if isSelected {
 			pStyle = pidStyleSel
@@ -204,8 +202,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 
 		var statusStr string
 		if s.IsSuspended(proc.Pid) {
-			// Special case: Suspended gets its own color (Warning)
-			// We construct this on the fly as it's rare, or we could pre-allocate it too
+			// Suspended state styling (warning color)
 			base := statusStyle
 			if isSelected {
 				base = statusStyleSel
@@ -218,7 +215,6 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		cpuStr := fmt.Sprintf("%.1f%%", cpuVal)
 		memStr := fmt.Sprintf("%.1f%%", proc.Memory)
 
-		// Styles already include Width and Align
 		cpuCell := cpuStyle.Render(cpuStr)
 		memCell := memStyle.Render(memStr)
 
@@ -227,7 +223,6 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			space = selectedStyle.Render(" ")
 		}
 
-		// Compose row
 		rowContent := pidCell + space + nameCell + space + statusStr + space + cpuCell + space + memCell
 
 		var row string
@@ -350,7 +345,6 @@ func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container li
 		lipgloss.NewStyle().Width(col3Width).Render(rightCol),
 	)
 
-	// History Chart
 	var chart string
 	hist, ok := s.GetHistory(proc.Pid)
 	if ok && hist.Len() > 2 {
