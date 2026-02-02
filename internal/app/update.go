@@ -43,7 +43,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ShowKillDialog = false
 		m.KillTargetPid = 0
 		m.KillTargetName = ""
-		// Refresh processes after kill
 		return m, process.ProcessesCmd(m.SortBy)
 
 	case messages.PriorityChangeMsg:
@@ -56,7 +55,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != nil {
 			return m, AddToastCmd(fmt.Sprintf("%s Failed: %v", strings.Title(msg.Action), msg.Err), data.ToastError)
 		}
-		// App-side state tracking
 		switch msg.Action {
 		case "suspend":
 			m.SetSuspended(msg.Pid, true)
@@ -94,7 +92,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.OpenFilesList = msg.Files
 		m.OpenFilesPid = msg.Pid
 
-		// Set content for Viewport
 		var lines []string
 		for _, f := range msg.Files {
 			lines = append(lines, f.Path)
@@ -143,12 +140,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ShowKillDialog {
 			switch msg.String() {
 			case "y", "enter":
-				// Confirm kill
 				pid := m.KillTargetPid
 				m.ShowKillDialog = false
 				return m, KillProcessCmd(pid)
 			case "n", "esc":
-				// Cancel kill
 				m.ShowKillDialog = false
 				m.KillTargetPid = 0
 				m.KillTargetName = ""
@@ -230,7 +225,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "up", "k":
 				m.SettingsIdx = (m.SettingsIdx - 1 + totalSettings) % totalSettings
-				// Update SettingsSel for threshold items
 				if m.SettingsIdx < 4 {
 					metrics := []config.MetricType{config.MetricCPU, config.MetricMem, config.MetricDisk, config.MetricTemp}
 					m.SettingsSel = metrics[m.SettingsIdx]
@@ -243,7 +237,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "+", "=", "right", "l":
 				if m.SettingsIdx < 4 {
-					// Threshold adjustment
 					curr := m.Config.Thresholds[m.SettingsSel]
 					if curr < 100 {
 						m.Config.Thresholds[m.SettingsSel] = curr + 1
@@ -266,7 +259,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Global Keybindings (Always active unless trapped above)
+		// Global Keybindings
 		switch msg.String() {
 		case "q", "ctrl+c":
 			config.SaveConfig(m.Config)

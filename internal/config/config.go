@@ -30,7 +30,18 @@ type AppConfig struct {
 	Tabs             []string               `json:"tabs,omitempty"`
 	Logging          LoggingConfig          `json:"logging"`
 	RemoteHosts      []RemoteHostConfig     `json:"remote_hosts"`
+	HealthWeights    HealthWeights          `json:"health_weights"`
 	CustomTheme      *CustomThemeConfig     `json:"custom_theme,omitempty"`
+}
+
+type HealthWeights struct {
+	CpuCritical  int `json:"cpu_critical"`
+	CpuHigh      int `json:"cpu_high"`
+	MemCritical  int `json:"mem_critical"`
+	MemHigh      int `json:"mem_high"`
+	DiskCritical int `json:"disk_critical"`
+	TempCritical int `json:"temp_critical"`
+	TempHigh     int `json:"temp_high"`
 }
 
 type RemoteHostConfig struct {
@@ -72,6 +83,15 @@ func DefaultConfig() AppConfig {
 			MetricMem:  90.0,
 			MetricDisk: 90.0,
 			MetricTemp: 85.0,
+		},
+		HealthWeights: HealthWeights{
+			CpuCritical:  30,
+			CpuHigh:      10,
+			MemCritical:  30,
+			MemHigh:      10,
+			DiskCritical: 20,
+			TempCritical: 30,
+			TempHigh:     10,
 		},
 	}
 }

@@ -27,7 +27,6 @@ func PutProcSlice(s *[]data.ProcessInfo) {
 	if s == nil || *s == nil {
 		return
 	}
-	// Reset length, keep capacity
 	*s = (*s)[:0]
 	procSlicePool.Put(s)
 }

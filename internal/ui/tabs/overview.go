@@ -194,9 +194,6 @@ func RenderOverview(s *data.AppState, container, titleStyle, labelStyle, valueSt
 			topStr += fmt.Sprintf("%-12s %5.1f%%\n", name, p.Cpu)
 		}
 	}
-	// Use manual styling to match block width
-	// We defer styling to loop below but we need content.
-	// Actually loop below applies blockWithMargin.
 	blocks = append(blocks, topStr)
 
 	numRows := (len(blocks) + cols - 1) / cols

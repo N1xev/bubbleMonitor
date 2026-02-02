@@ -1,31 +1,41 @@
 package app
 
 import (
+	configpkg "github.com/N1xev/bubbleMonitor/internal/config"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
 
+// UpdateHealthScore calculates the system health score based on critical metrics.
+// We start with 100 points and deduct points based on severity of usage (CPU, Memory, Disk, Temp).
 func UpdateHealthScore(s *data.AppState) {
 	score := data.MaxHealthScore
-	if s.Cpu > data.HealthThresholdHealthy {
-		score -= data.HealthDeductionCPUCritical
-	} else if s.Cpu > data.HealthThresholdWarning {
-		score -= data.HealthDeductionCPUHigh
+	weights := s.Config.HealthWeights
+	thresholds := s.Config.Thresholds
+
+	// CPU penalty
+	if s.Cpu > thresholds[configpkg.MetricCPU] {
+		score -= weights.CpuCritical
+	} else if s.Cpu > (thresholds[configpkg.MetricCPU] * 0.7) { // 70% of critical is warning
+		score -= weights.CpuHigh
 	}
 
-	if s.Memory > data.HealthThresholdCritical {
-		score -= data.HealthDeductionMemoryCritical
-	} else if s.Memory > data.HealthThresholdWarning {
-		score -= data.HealthDeductionMemoryHigh
+	// Memory penalty
+	if s.Memory > thresholds[configpkg.MetricMem] {
+		score -= weights.MemCritical
+	} else if s.Memory > (thresholds[configpkg.MetricMem] * 0.7) {
+		score -= weights.MemHigh
 	}
 
-	if s.Disk > data.HealthThresholdCritical {
-		score -= data.HealthDeductionDiskCritical
+	// Disk space penalty
+	if s.Disk > thresholds[configpkg.MetricDisk] {
+		score -= weights.DiskCritical
 	}
 
-	if s.CpuTemp > data.HealthThresholdHealthy {
-		score -= data.HealthDeductionTempCritical
-	} else if s.CpuTemp > data.HealthThresholdWarning {
-		score -= data.HealthDeductionTempHigh
+	// Temperature penalty
+	if s.CpuTemp > thresholds[configpkg.MetricTemp] {
+		score -= weights.TempCritical
+	} else if s.CpuTemp > (thresholds[configpkg.MetricTemp] * 0.8) {
+		score -= weights.TempHigh
 	}
 
 	if score < 0 {
@@ -34,11 +44,17 @@ func UpdateHealthScore(s *data.AppState) {
 	s.HealthScore = score
 }
 
+// UpdateProcessHistory maintains a history buffer for the selected process
+// and top resource consumers. This allows the charts to show history even
+// if you just clicked on a process.
 func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
 	if len(s.Processes) == 0 {
 		return
 	}
 
+	// We want to track history for:
+	// 1. The currently selected process (obviously)
+	// 2. The top N processes by CPU, so if we switch to them, we have data ready
 	targetPids := make(map[int32]bool)
 
 	if s.SelectedProcess >= 0 && s.SelectedProcess < len(s.Processes) {
@@ -46,7 +62,7 @@ func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
 		targetPids[pid] = true
 	}
 
-	// Track top consumers (CPU by default)
+	// Pre-warm history for top consumers
 	limit := data.TopProcessesTrackCount
 	if len(s.Processes) < limit {
 		limit = len(s.Processes)
@@ -62,5 +78,6 @@ func UpdateProcessHistory(s *data.AppState, alivePids map[int32]bool) {
 		}
 	}
 
+	// Cleanup old data to prevent memory leaks
 	s.PruneDeadProcessHistory(alivePids)
 }
