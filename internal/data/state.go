@@ -124,13 +124,14 @@ type AppState struct {
 	ChartType string
 
 	// Customization
-	Theme             string
-	RefreshRate       int
-	BorderType        string
-	BorderStyle       string
-	BackgroundOpaque  bool
-	LastConfigModTime time.Time
-	ActiveTabs        []string
+	Theme                string
+	RefreshRate          int
+	BorderType           string
+	BorderStyle          string
+	BackgroundOpaque     bool
+	ProcessCpuNormalized bool // Toggle between Raw (>100%) and Normalized (0-100%)
+	LastConfigModTime    time.Time
+	ActiveTabs           []string
 
 	// UI State
 	CpuCoreScrollOffset int

@@ -2,6 +2,7 @@ package tabs
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -153,7 +154,12 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			sStyle = statusStyle
 		}
 
-		cpuStyle := getStyle(proc.Cpu, isSelected)
+		cpuVal := proc.Cpu
+		if s.ProcessCpuNormalized {
+			cpuVal = cpuVal / float64(runtime.NumCPU())
+		}
+
+		cpuStyle := getStyle(cpuVal, isSelected)
 		memStyle := getStyle(proc.Memory, isSelected)
 
 		name := proc.Name
@@ -209,7 +215,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			statusStr = sStyle.Render(status)
 		}
 
-		cpuStr := fmt.Sprintf("%.1f%%", proc.Cpu)
+		cpuStr := fmt.Sprintf("%.1f%%", cpuVal)
 		memStr := fmt.Sprintf("%.1f%%", proc.Memory)
 
 		// Styles already include Width and Align

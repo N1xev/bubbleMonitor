@@ -290,6 +290,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		case "n":
+			m.ProcessCpuNormalized = !m.ProcessCpuNormalized
+			status := "Raw (>100%)"
+			if m.ProcessCpuNormalized {
+				status = "Normalized (0-100%)"
+			}
+			return m, AddToastCmd("CPU Mode: "+status, data.ToastInfo)
 		}
 
 		// Normal key handling
@@ -896,9 +903,12 @@ func (m *Model) handleSettingsChange(dir int) {
 		}
 		m.Config.HistoryLength = m.HistoryLength
 
-	case 8, 9, 10, 11, 12, 13: // Tabs
+	case 8: // Process CPU Normalized
+		m.ProcessCpuNormalized = !m.ProcessCpuNormalized
+
+	case 9, 10, 11, 12, 13, 14: // Tabs
 		allTabs := []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System"}
-		tabIdx := m.SettingsIdx - 8
+		tabIdx := m.SettingsIdx - 9
 		if tabIdx >= 0 && tabIdx < len(allTabs) {
 			targetTab := allTabs[tabIdx]
 
@@ -922,7 +932,7 @@ func (m *Model) handleSettingsChange(dir int) {
 			m.Config.Tabs = m.ActiveTabs
 		}
 
-	case 14: // Theme
+	case 15: // Theme
 		themes := config.GetThemeNames()
 		for i, t := range themes {
 			if t == m.Theme {
@@ -936,7 +946,7 @@ func (m *Model) handleSettingsChange(dir int) {
 			m.Config.CustomTheme = config.DefaultCustomTheme()
 		}
 
-	case 15: // Refresh Rate
+	case 16: // Refresh Rate
 		rates := config.GetRefreshRates()
 		for i, r := range rates {
 			if r == m.RefreshRate {
@@ -947,7 +957,7 @@ func (m *Model) handleSettingsChange(dir int) {
 		}
 		m.Config.RefreshRate = m.RefreshRate
 
-	case 16: // Border Type
+	case 17: // Border Type
 		types := config.GetBorderTypes()
 		for i, t := range types {
 			if t == m.BorderType {
@@ -958,7 +968,7 @@ func (m *Model) handleSettingsChange(dir int) {
 		}
 		m.Config.BorderType = m.BorderType
 
-	case 17: // Border Style
+	case 18: // Border Style
 		styles := config.GetBorderStyles()
 		for i, s := range styles {
 			if s == m.BorderStyle {
@@ -969,7 +979,7 @@ func (m *Model) handleSettingsChange(dir int) {
 		}
 		m.Config.BorderStyle = m.BorderStyle
 
-	case 18: // Background
+	case 19: // Background
 		m.BackgroundOpaque = !m.BackgroundOpaque
 		m.Config.BackgroundOpaque = m.BackgroundOpaque
 	}

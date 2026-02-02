@@ -68,6 +68,10 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		{"View Type:", viewName, 5},
 		{"Sort By:", s.SortBy, 6},
 		{"History Length:", fmt.Sprintf("%ds", s.HistoryLength), 7},
+		{"Process CPU:", "Raw", 8},
+	}
+	if s.ProcessCpuNormalized {
+		displayItems[4].value = "Normalized"
 	}
 
 	for _, item := range displayItems {
@@ -83,7 +87,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	col2 = append(col2, headerStyle.Render("TABS & APPEARANCE"))
 
 	allTabs := []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System"}
-	currentTabIdxBase := 8
+	currentTabIdxBase := 9
 
 	for i, tabName := range allTabs {
 		idx := currentTabIdxBase + i
