@@ -54,14 +54,11 @@ func (s *SumAccessor) Max() float64 {
 func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
 	width := app.Width
 
-	// 1. Calculate Layout Columns
-	// Charts
 	chartCols := 1
 	if width >= 100 {
 		chartCols = 2
 	}
 
-	// Cores
 	coreCols := 1
 	if width >= 60 {
 		coreCols = 2
@@ -76,7 +73,6 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 		coreCols = 5
 	}
 
-	// 2. Calculate Required Core Height
 	numCores := len(app.CpuPerCore)
 	if numCores == 0 {
 		numCores = 1
@@ -85,21 +81,18 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	numCoreRows := (numCores + coreCols - 1) / coreCols
 	coreSectionHeight := numCoreRows + 2
 
-	// 3. Calculate Available Chart Height
 	availChartSpace := availHeight - coreSectionHeight
 	minChartSpace := 6
 	if availChartSpace < minChartSpace {
 		availChartSpace = minChartSpace
 	}
 
-	// 4. Distribute Space to Charts
 	numChartRows := (4 + chartCols - 1) / chartCols
 	chartBlockHeight := availChartSpace / numChartRows
 	if chartBlockHeight < 5 {
 		chartBlockHeight = 5
 	}
 
-	// 5. Render Charts
 	textStyle := lipgloss.NewStyle().Foreground(t)
 	chartsTitles := []string{
 		fmt.Sprintf("CPU HISTORY (Window: %ds)", app.HistoryLength),
@@ -111,7 +104,6 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 
 	chartWidths := util.CalculateColumnWidths(width, chartCols)
 
-	// Helper to render chart based on ChartType
 	renderChart := func(data data.Accessor, chartW, chartH int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 		switch app.ChartType {
 		case "line":
@@ -172,7 +164,6 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 		renderedCharts = append(renderedCharts, lipgloss.JoinVertical(lipgloss.Left, topBorder, body))
 	}
 
-	// Assemble Top Section (Charts)
 	var rows []string
 	for i := 0; i < len(renderedCharts); i += chartCols {
 		end := i + chartCols
@@ -183,7 +174,6 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	}
 	topSection := lipgloss.JoinVertical(lipgloss.Left, rows...)
 
-	// 6. Render Cores
 	coreColWidths := util.CalculateColumnWidths(width, coreCols)
 	var coreBlocks []string
 	textStyle = lipgloss.NewStyle().Foreground(t)
@@ -219,7 +209,6 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 		coreRows = append(coreRows, rowStr)
 	}
 
-	// Pagination Logic
 	const maxCoreRows = 4
 	totalCoreRows := len(coreRows)
 	visibleCoreRows := coreRows
@@ -236,19 +225,15 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 
 	coresC := strings.Join(visibleCoreRows, "\n")
 
-	// Add Hint if needed
 	title := "CPU PER CORE"
 	if totalCoreRows > maxCoreRows {
 		title += fmt.Sprintf(" (PgUp/PgDn %d/%d)", app.CpuCoreScrollOffset+1, totalCoreRows-maxCoreRows+1)
 	}
 
-	// Assemble Bottom Section (Cores)
 	coresBoxWidth := width
 	topBorder := widgets.RenderTopBorderWithBg(title, coresBoxWidth, widgets.GetBorder(app.BorderStyle, app.BorderType), b, p)
 
-	finalCoreHeight := len(visibleCoreRows)
-
-	c := container.Width(coresBoxWidth).Height(finalCoreHeight).BorderTop(false)
+	c := container.Width(coresBoxWidth).Height(len(visibleCoreRows)).BorderTop(false)
 	body := c.Render(coresC)
 
 	bottomSection := lipgloss.JoinVertical(lipgloss.Left, topBorder, body)

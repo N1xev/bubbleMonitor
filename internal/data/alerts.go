@@ -8,7 +8,6 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/config"
 )
 
-// Alert represents a triggered alert
 type Alert struct {
 	Type      config.MetricType
 	Value     float64
@@ -17,26 +16,21 @@ type Alert struct {
 	Timestamp time.Time
 }
 
-// AlertManager handles checking and storing alerts
 type AlertManager struct {
 	ActiveAlerts map[config.MetricType]Alert
 	mu           sync.RWMutex
 }
 
-// NewAlertManager creates a new alert manager
 func NewAlertManager() *AlertManager {
 	return &AlertManager{
 		ActiveAlerts: make(map[config.MetricType]Alert),
 	}
 }
 
-// CheckAlerts verifies metrics against thresholds and updates active alerts
-// Uses AppState to check metrics
 func (am *AlertManager) CheckAlerts(s *AppState) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	// CPU Check
 	cpuThreshold := s.Config.Thresholds[config.MetricCPU]
 	if cpuThreshold > 0 && s.Cpu > cpuThreshold {
 		am.ActiveAlerts[config.MetricCPU] = Alert{
@@ -50,7 +44,6 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 		delete(am.ActiveAlerts, config.MetricCPU)
 	}
 
-	// Memory Check
 	memThreshold := s.Config.Thresholds[config.MetricMem]
 	if memThreshold > 0 && s.Memory > memThreshold {
 		am.ActiveAlerts[config.MetricMem] = Alert{
@@ -64,7 +57,6 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 		delete(am.ActiveAlerts, config.MetricMem)
 	}
 
-	// Disk Check (Overall System Usage)
 	diskThreshold := s.Config.Thresholds[config.MetricDisk]
 	if diskThreshold > 0 {
 		var totalUsed, totalAll uint64
@@ -90,7 +82,6 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 		}
 	}
 
-	// Temperature Check
 	tempThreshold := s.Config.Thresholds[config.MetricTemp]
 	if tempThreshold > 0 && s.CpuTemp > tempThreshold {
 		am.ActiveAlerts[config.MetricTemp] = Alert{

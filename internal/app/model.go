@@ -17,7 +17,6 @@ type Model struct {
 	data.AppState
 }
 
-// Init initializes the model and returns start commands
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		system.TickCmd(time.Duration(m.RefreshRate)*time.Millisecond),
@@ -35,12 +34,10 @@ func (m Model) Init() tea.Cmd {
 	)
 }
 
-// View renders the UI
 func (m Model) View() tea.View {
 	return ui.RenderFromAppState(&m.AppState)
 }
 
-// GetBorder returns the lipgloss border for the current style
 func (m Model) GetBorder() lipgloss.Border {
 	switch m.BorderStyle {
 	case "double":
@@ -64,19 +61,15 @@ func (m Model) GetBorder() lipgloss.Border {
 	}
 }
 
-// InitialModel creates a new Model with default values
 func InitialModel() Model {
-	// Load Configuration
 	cfg, err := configpkg.LoadConfig()
 	if err != nil {
 		// Fallback to default if error
 		cfg = configpkg.DefaultConfig()
 	}
 
-	// Initialize Alert Manager
 	am := data.NewAlertManager()
 
-	// Fetch static CPU info once at startup (doesn't change)
 	cpuInfo, _ := cpu.Info()
 
 	return Model{

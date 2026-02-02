@@ -12,14 +12,6 @@ type treeBuilder struct {
 	children map[int32][]int32
 }
 
-func newTreeBuilder() *treeBuilder {
-	return &treeBuilder{
-		procMap:  make(map[int32]*ProcessInfo, 500),
-		procIdx:  make(map[int32]int, 500),
-		children: make(map[int32][]int32, 500),
-	}
-}
-
 func (s *AppState) GetVisibleProcesses() ([]ProcessInfo, map[int32]int) {
 	if !s.ProcessCacheDirty && s.CachedVisibleProcs != nil {
 		return s.CachedVisibleProcs, s.CachedTreeIndents
@@ -46,7 +38,11 @@ func (s *AppState) InvalidateProcessCache() {
 }
 
 func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int32]int) {
-	tb := newTreeBuilder()
+	tb := &treeBuilder{
+		procMap:  make(map[int32]*ProcessInfo, 500),
+		procIdx:  make(map[int32]int, 500),
+		children: make(map[int32][]int32, 500),
+	}
 
 	for i := range procs {
 		tb.procMap[procs[i].Pid] = &procs[i]

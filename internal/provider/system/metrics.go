@@ -14,14 +14,12 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/msg"
 )
 
-// TickCmd returns a command that ticks after the specified duration
 func TickCmd(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(t time.Time) tea.Msg {
 		return msg.TickMsg(t)
 	})
 }
 
-// FastMetricsCmd fetches fast-changing system metrics (CPU, Memory)
 func FastMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error
@@ -76,7 +74,6 @@ func FastMetricsCmd() tea.Cmd {
 	}
 }
 
-// SlowMetricsCmd fetches slow-changing system metrics (Disk, Network)
 func SlowMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error

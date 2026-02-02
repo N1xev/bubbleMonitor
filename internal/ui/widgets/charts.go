@@ -11,7 +11,6 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
 
-// Pools for reusing chart buffers
 var (
 	stringGridPool = sync.Pool{
 		New: func() interface{} {
@@ -27,7 +26,6 @@ var (
 	}
 )
 
-// RenderSparkline creates a sparkline chart from data
 func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 	if data.Len() == 0 {
 		return "No data"
@@ -69,7 +67,6 @@ func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.Adapti
 	return result.String()
 }
 
-// RenderLineChart creates a multi-line chart using block characters
 func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"
@@ -82,11 +79,9 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		maxV = 1
 	}
 
-	// Get grid from pool
 	gridPtr := stringGridPool.Get().(*[][]string)
 	grid := *gridPtr
 
-	// Ensure capacity
 	if cap(grid) < height {
 		grid = make([][]string, height)
 	} else {
@@ -119,7 +114,6 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		}
 	}
 
-	// Convert grid to string
 	lines := make([]string, 0, height)
 	for r := 0; r < height; r++ {
 		var line strings.Builder
@@ -135,14 +129,12 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		lines = append(lines, line.String())
 	}
 
-	// Return grid to pool
 	*gridPtr = grid
 	stringGridPool.Put(gridPtr)
 
 	return strings.Join(lines, "\n")
 }
 
-// RenderBarChart creates a horizontal bar chart
 func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 	if data.Len() == 0 {
 		return "No data"
@@ -155,7 +147,6 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 		maxV = 1
 	}
 
-	// Show latest N values that fit in height
 	startIdx := 0
 	count := data.Len() - startIdx
 	if data.Len() > height {
@@ -184,7 +175,6 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 	return strings.Join(lines, "\n")
 }
 
-// RenderBrailleChart creates a high-resolution chart using Unicode Braille patterns
 func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"

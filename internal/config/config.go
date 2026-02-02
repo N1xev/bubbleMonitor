@@ -16,7 +16,6 @@ const (
 	MetricTemp MetricType = "Temperature"
 )
 
-// AppConfig holds persistent configuration
 type AppConfig struct {
 	Thresholds       map[MetricType]float64 `json:"thresholds"`
 	HistoryLength    int                    `json:"history_length"`
@@ -44,7 +43,6 @@ type LoggingConfig struct {
 	Path    string `json:"path"`
 }
 
-// CustomThemeConfig holds user-configurable theme colors
 type CustomThemeConfig struct {
 	Primary    string `json:"primary"`
 	Secondary  string `json:"secondary"`
@@ -57,7 +55,6 @@ type CustomThemeConfig struct {
 	Background string `json:"background"`
 }
 
-// DefaultConfig returns the default configuration
 func DefaultConfig() AppConfig {
 	return AppConfig{
 		HistoryLength:    60,
@@ -79,7 +76,6 @@ func DefaultConfig() AppConfig {
 	}
 }
 
-// GetConfigPath resolves the configuration file path
 func GetConfigPath() (string, error) {
 	config, err := os.UserConfigDir()
 	if err != nil {
@@ -92,7 +88,6 @@ func GetConfigPath() (string, error) {
 	return filepath.Join(configDir, "config.json"), nil
 }
 
-// LoadConfig loads the configuration from file
 func LoadConfig() (AppConfig, error) {
 	path, err := GetConfigPath()
 	if err != nil {
@@ -152,7 +147,6 @@ func LoadConfig() (AppConfig, error) {
 	return config, nil
 }
 
-// SaveConfig writes the configuration to file
 func SaveConfig(config AppConfig) error {
 	path, err := GetConfigPath()
 	if err != nil {
@@ -168,4 +162,22 @@ func SaveConfig(config AppConfig) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(config)
+}
+
+func ResolvePath(path string, defaultName string) (string, error) {
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, defaultName), nil
+	}
+	if !filepath.IsAbs(path) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, path), nil
+	}
+	return path, nil
 }

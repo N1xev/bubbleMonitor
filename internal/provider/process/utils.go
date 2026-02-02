@@ -7,18 +7,13 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/provider"
 )
 
-// --- Slice Pool ---
-
 var procSlicePool = sync.Pool{
 	New: func() interface{} {
-		// Start with a reasonable capacity, e.g., 500
 		s := make([]data.ProcessInfo, 0, provider.ProcessListCapacity)
 		return &s
 	},
 }
 
-// GetProcSlice returns a pointer to a slice from the pool.
-// The slice is reset to length 0.
 func GetProcSlice() *[]data.ProcessInfo {
 	slice, ok := procSlicePool.Get().(*[]data.ProcessInfo)
 	if !ok {
@@ -28,8 +23,6 @@ func GetProcSlice() *[]data.ProcessInfo {
 	return slice
 }
 
-// PutProcSlice returns a slice to the pool.
-// It resets the length to 0 to be ready for reuse.
 func PutProcSlice(s *[]data.ProcessInfo) {
 	if s == nil || *s == nil {
 		return
@@ -38,8 +31,6 @@ func PutProcSlice(s *[]data.ProcessInfo) {
 	*s = (*s)[:0]
 	procSlicePool.Put(s)
 }
-
-// --- String Interner ---
 
 type Interner struct {
 	mu    sync.RWMutex
@@ -53,9 +44,6 @@ var globalInterner = &Interner{
 	cache: make(map[string]string),
 }
 
-// Intern returns a deduplicated string.
-// If s is already in the cache, the cached version is returned.
-// Otherwise, s is added to the cache and returned.
 func Intern(s string) string {
 	return globalInterner.Intern(s)
 }

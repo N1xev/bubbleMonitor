@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	configpkg "github.com/N1xev/bubbleMonitor/internal/config"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/msg"
 )
@@ -28,24 +28,23 @@ func SaveSnapshotCmd(cpu, memory, disk float64, processCount int) tea.Cmd {
 			Processes: processCount,
 		}
 
-		home, err := os.UserHomeDir()
+		path, err := configpkg.ResolvePath("", "bubble_snapshot.json")
 		if err != nil {
-			return msg.ToastMsg{Message: "Failed to get home dir", Level: data.ToastError, Duration: 3 * time.Second}
+			return msg.ToastMsg{Message: fmt.Sprintf("Path Error: %v", err), Level: data.ToastError, Duration: 3 * time.Second}
 		}
 
-		path := filepath.Join(home, "bubble_snapshot.json")
 		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return msg.ToastMsg{Message: "Failed to open file", Level: data.ToastError, Duration: 3 * time.Second}
+			return msg.ToastMsg{Message: fmt.Sprintf("Failed to open file %s: %v", path, err), Level: data.ToastError, Duration: 3 * time.Second}
 		}
 		defer file.Close()
 
 		encoder := json.NewEncoder(file)
 		if err := encoder.Encode(snapshot); err != nil {
-			return msg.ToastMsg{Message: "Failed to write snapshot", Level: data.ToastError, Duration: 3 * time.Second}
+			return msg.ToastMsg{Message: fmt.Sprintf("Failed to write snapshot: %v", err), Level: data.ToastError, Duration: 3 * time.Second}
 		}
 
-		csvPath := filepath.Join(home, "bubble_snapshot.csv")
+		csvPath, _ := configpkg.ResolvePath("", "bubble_snapshot.csv")
 		csvFile, err := os.OpenFile(csvPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err == nil {
 			defer csvFile.Close()

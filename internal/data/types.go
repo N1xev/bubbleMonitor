@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// ProcessInfo holds information about a running process
 type ProcessInfo struct {
 	Name        string
 	Pid         int32
@@ -18,20 +17,17 @@ type ProcessInfo struct {
 	Nice        int32 // Priority
 	Ppid        int32 // Parent PID
 
-	// Cached lowercase fields for filtering performance
 	NameLower     string
 	UsernameLower string
 	CmdlineLower  string
 }
 
-// ProcessSnapshot stores a point-in-time resource snapshot for a process
 type ProcessSnapshot struct {
 	Timestamp time.Time
 	Cpu       float64
 	Memory    float64
 }
 
-// DiskPartition holds information about a disk partition
 type DiskPartition struct {
 	Mountpoint string
 	Device     string
@@ -41,7 +37,6 @@ type DiskPartition struct {
 	UsedPct    float64
 }
 
-// GpuInfo holds information about a GPU
 type GpuInfo struct {
 	Name        string
 	Driver      string
@@ -49,7 +44,6 @@ type GpuInfo struct {
 	MemoryUsed  string
 }
 
-// Toast Levels
 const (
 	ToastInfo    = "info"
 	ToastError   = "error"

@@ -136,22 +136,17 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		bg = compat.AdaptiveColor{Light: lipgloss.NoColor{}, Dark: lipgloss.NoColor{}}
 	}
 
-	// Border style
 	border := getBorder()
 
-	// Render Header with top margin
 	headerText := " BUBBLE MONITOR"
 	header := styleCache.header.Render(headerText)
 
-	// Add time
 	header += " " + styleCache.dim.Render(time.Now().Format("15:04:05"))
 
-	// Create Alert String
 	var alertStr string
 	if s.AlertManager != nil && s.AlertManager.HasAlerts() {
 		rawText := "  ⚠️  ALERT: "
 
-		// Append first alert message
 		alerts := s.AlertManager.GetAlerts()
 		if len(alerts) > 0 {
 			rawText += alerts[0].Message
@@ -159,7 +154,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		alertStr = styleCache.warn.Render(rawText)
 	}
 
-	// Render Tabs with top margin
 	var tabBlocks []string
 	for i, titleRaw := range s.ActiveTabs {
 		title := strings.ToUpper(titleRaw)
@@ -172,7 +166,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 
 	tabRow := lipgloss.NewStyle().MarginTop(1).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, tabBlocks...))
 
-	// TopBar Assembly
 	var topBar string
 	if s.Width >= WideLayoutThreshold && alertStr != "" {
 		alertBlock := styleCache.warn.MarginTop(1).Render(alertStr)
@@ -181,7 +174,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		topBar = lipgloss.JoinHorizontal(lipgloss.Top, header, "    ", tabRow)
 	}
 
-	// Footer - context-aware
 	var footerText string
 	if s.SelectedTab == 2 {
 		if s.FilterMode {
@@ -193,7 +185,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		footerText = "Press ? for Help • q to Quit"
 	}
 
-	// Footer Assembly
 	var footer string
 	if s.Width < 130 && alertStr != "" {
 		footerLeft := lipgloss.NewStyle().Foreground(mu).Render(footerText)
@@ -218,13 +209,12 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	if availHeight < 5 {
 		availHeight = 5
 	}
-	// Determine active tab
+
 	activeTab := ""
 	if s.SelectedTab >= 0 && s.SelectedTab < len(s.ActiveTabs) {
 		activeTab = s.ActiveTabs[s.SelectedTab]
 	}
 
-	// Styles for tabs
 	titleStyle := lipgloss.NewStyle().Foreground(p).Bold(true).MarginBottom(1)
 	labelStyle := lipgloss.NewStyle().Foreground(mu)
 	valueStyle := lipgloss.NewStyle().Foreground(t).Bold(true)
@@ -244,7 +234,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	case "Metrics":
 		content = tabs.RenderMetrics(s, container, su, w, a, sColor, t, mu, p, b, availHeight)
 	case "Processes":
-		// Get visible processes
 		visibleProcs, treeIndents := s.GetVisibleProcesses()
 		content = tabs.RenderProcesses(s, visibleProcs, treeIndents, container, su, w, a, t, mu, p, b, availHeight)
 	case "Disks":
@@ -271,7 +260,6 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		content,
 	)
 
-	// Determine how much space left for footer to stick to bottom
 	currH := lipgloss.Height(ui)
 
 	rem := s.Height - currH - footerH
@@ -285,13 +273,11 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		footer,
 	)
 
-	// Create base layer
 	baseLayer := lipgloss.NewLayer(ui).Width(s.Width).Height(s.Height)
 
 	var layers []*lipgloss.Layer
 	layers = append(layers, baseLayer)
 
-	// Toast Overlay
 	if len(s.Toasts) > 0 {
 		var toastBlocks []string
 		for _, toast := range s.Toasts {
