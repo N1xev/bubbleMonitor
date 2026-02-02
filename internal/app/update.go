@@ -642,7 +642,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.CpuHistory.Push(m.Cpu)
 		m.MemHistory.Push(m.Memory)
 		m.SwapHistory.Push(m.Swap)
-		UpdateAnalysis(&m.AppState, nil)
+		UpdateHealthScore(&m.AppState)
 
 	case messages.DiskNetMsg:
 		if msg.Err != nil {
@@ -700,7 +700,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.Processes = allProcesses
 		m.InvalidateProcessCache()
-		UpdateAnalysis(&m.AppState, currentPids)
+		UpdateHealthScore(&m.AppState)
+		UpdateProcessHistory(&m.AppState, currentPids)
 
 		filteredLen := m.getFilteredProcessCount()
 		if m.SelectedProcess >= filteredLen {

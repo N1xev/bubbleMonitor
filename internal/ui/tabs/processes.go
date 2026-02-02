@@ -82,14 +82,30 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 	selectedStyle := lipgloss.NewStyle().Background(selColor)
 	cellStyle := lipgloss.NewStyle()
 
-	// Pre-allocate styles to avoid garbage creation in the loop
-	styleLow := cellStyle.Foreground(su)
-	styleMed := cellStyle.Foreground(w)
-	styleHigh := cellStyle.Foreground(a)
+	// Pre-allocate styles with widths to avoid garbage creation in the loop
+	// Standard cells
+	pidStyle := cellStyle.Width(pidWidth)
+	pidStyleSel := selectedStyle.Width(pidWidth)
 
-	styleLowSel := styleLow.Background(selColor)
-	styleMedSel := styleMed.Background(selColor)
-	styleHighSel := styleHigh.Background(selColor)
+	statusStyle := cellStyle.Width(statusWidth)
+	statusStyleSel := selectedStyle.Width(statusWidth)
+
+	// Dynamic name width
+	nameStyle := cellStyle.Width(nameWidth)
+	nameStyleSel := selectedStyle.Width(nameWidth)
+
+	// Metric styles (Low/Med/High) - Include Width and Align
+	// CPU and Mem have same width (8)
+	baseMetric := cellStyle.Width(cpuWidth).Align(lipgloss.Right)
+	baseMetricSel := selectedStyle.Width(cpuWidth).Align(lipgloss.Right)
+
+	styleLow := baseMetric.Foreground(su)
+	styleMed := baseMetric.Foreground(w)
+	styleHigh := baseMetric.Foreground(a)
+
+	styleLowSel := baseMetricSel.Foreground(su)
+	styleMedSel := baseMetricSel.Foreground(w)
+	styleHighSel := baseMetricSel.Foreground(a)
 
 	getStyle := func(val float64, selected bool) lipgloss.Style {
 		if selected {
@@ -110,6 +126,10 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		return styleHigh
 	}
 
+	// Row styles
+	rowStyle := lipgloss.NewStyle().Width(contentWidth)
+	rowStyleSel := selectedStyle.Width(contentWidth)
+
 	rows := make([]string, 0, endIdx-startIdx)
 	var selectedProc *data.ProcessInfo
 
@@ -121,16 +141,22 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			selectedProc = &proc
 		}
 
-		currCellStyle := cellStyle
+		// Select pre-allocated styles
+		var pStyle, nStyle, sStyle lipgloss.Style
 		if isSelected {
-			currCellStyle = currCellStyle.Background(selColor)
+			pStyle = pidStyleSel
+			nStyle = nameStyleSel
+			sStyle = statusStyleSel
+		} else {
+			pStyle = pidStyle
+			nStyle = nameStyle
+			sStyle = statusStyle
 		}
 
 		cpuStyle := getStyle(proc.Cpu, isSelected)
 		memStyle := getStyle(proc.Memory, isSelected)
 
 		name := proc.Name
-
 		if s.IsBookmarked(proc.Pid) {
 			name = "★ " + name
 		}
@@ -138,7 +164,6 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		if s.TreeView {
 			if level, ok := treeIndents[proc.Pid]; ok {
 				prefix := strings.Repeat("  ", level)
-
 				indicator := ""
 				if s.IsCollapsed(proc.Pid) {
 					indicator = "▶ "
@@ -168,25 +193,28 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 			status = status[:statusWidth-3] + "..."
 		}
 
-		pidCell := currCellStyle.Width(pidWidth).Render(strconv.Itoa(int(proc.Pid)))
-		nameCell := currCellStyle.Width(nameWidth).Render(name)
+		pidCell := pStyle.Render(strconv.Itoa(int(proc.Pid)))
+		nameCell := nStyle.Render(name)
 
 		var statusStr string
 		if s.IsSuspended(proc.Pid) {
-			warnStyle := currCellStyle.Foreground(lipgloss.Color("#F59E0B"))
+			// Special case: Suspended gets its own color (Warning)
+			// We construct this on the fly as it's rare, or we could pre-allocate it too
+			base := statusStyle
 			if isSelected {
-				warnStyle = warnStyle.Background(selColor)
+				base = statusStyleSel
 			}
-			statusStr = warnStyle.Width(statusWidth).Render(status)
+			statusStr = base.Foreground(lipgloss.Color("#F59E0B")).Render(status)
 		} else {
-			statusStr = currCellStyle.Width(statusWidth).Render(status)
+			statusStr = sStyle.Render(status)
 		}
 
 		cpuStr := fmt.Sprintf("%.1f%%", proc.Cpu)
 		memStr := fmt.Sprintf("%.1f%%", proc.Memory)
 
-		cpuCell := cpuStyle.Width(cpuWidth).Align(lipgloss.Right).Render(cpuStr)
-		memCell := memStyle.Width(memWidth).Align(lipgloss.Right).Render(memStr)
+		// Styles already include Width and Align
+		cpuCell := cpuStyle.Render(cpuStr)
+		memCell := memStyle.Render(memStr)
 
 		space := " "
 		if isSelected {
@@ -196,10 +224,11 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		// Compose row
 		rowContent := pidCell + space + nameCell + space + statusStr + space + cpuCell + space + memCell
 
-		row := lipgloss.NewStyle().Width(contentWidth).Render(rowContent)
-
+		var row string
 		if isSelected {
-			row = selectedStyle.Width(contentWidth).Render(rowContent)
+			row = rowStyleSel.Render(rowContent)
+		} else {
+			row = rowStyle.Render(rowContent)
 		}
 		rows = append(rows, row)
 	}
