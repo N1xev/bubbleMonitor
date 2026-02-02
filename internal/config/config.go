@@ -17,21 +17,22 @@ const (
 )
 
 type AppConfig struct {
-	Thresholds       map[MetricType]float64 `json:"thresholds"`
-	HistoryLength    int                    `json:"history_length"`
-	ChartType        string                 `json:"chart_type"`
-	ViewType         string                 `json:"view_type"`         // "normal" or "tree"
-	SortBy           string                 `json:"sort_by"`           // "cpu", "mem", "pid"
-	Theme            string                 `json:"theme"`             // dark, light, nord, dracula, custom, etc
-	RefreshRate      int                    `json:"refresh_rate"`      // milliseconds: 500, 1000, 2000, 5000
-	BorderType       string                 `json:"border_type"`       // normal, rounded
-	BorderStyle      string                 `json:"border_style"`      // single, double, dashed
-	BackgroundOpaque bool                   `json:"background_opaque"` // true = opaque, false = transparent
-	Tabs             []string               `json:"tabs,omitempty"`
-	Logging          LoggingConfig          `json:"logging"`
-	RemoteHosts      []RemoteHostConfig     `json:"remote_hosts"`
-	HealthWeights    HealthWeights          `json:"health_weights"`
-	CustomTheme      *CustomThemeConfig     `json:"custom_theme,omitempty"`
+	Thresholds           map[MetricType]float64 `json:"thresholds"`
+	HistoryLength        int                    `json:"history_length"`
+	ChartType            string                 `json:"chart_type"`
+	ViewType             string                 `json:"view_type"`         // "normal" or "tree"
+	SortBy               string                 `json:"sort_by"`           // "cpu", "mem", "pid"
+	Theme                string                 `json:"theme"`             // dark, light, nord, dracula, custom, etc
+	RefreshRate          int                    `json:"refresh_rate"`      // milliseconds: 500, 1000, 2000, 5000
+	BorderType           string                 `json:"border_type"`       // normal, rounded
+	BorderStyle          string                 `json:"border_style"`      // single, double, dashed
+	BackgroundOpaque     bool                   `json:"background_opaque"` // true = opaque, false = transparent
+	ProcessCpuNormalized bool                   `json:"process_cpu_normalized"`
+	Tabs                 []string               `json:"tabs,omitempty"`
+	Logging              LoggingConfig          `json:"logging"`
+	RemoteHosts          []RemoteHostConfig     `json:"remote_hosts"`
+	HealthWeights        HealthWeights          `json:"health_weights"`
+	CustomTheme          *CustomThemeConfig     `json:"custom_theme,omitempty"`
 }
 
 type HealthWeights struct {
@@ -68,16 +69,17 @@ type CustomThemeConfig struct {
 
 func DefaultConfig() AppConfig {
 	return AppConfig{
-		HistoryLength:    60,
-		ChartType:        "braille",
-		ViewType:         "normal",
-		SortBy:           "cpu",
-		Theme:            "dark",
-		RefreshRate:      1000,
-		BorderType:       "rounded",
-		BorderStyle:      "dashed",
-		BackgroundOpaque: true,
-		Tabs:             []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"},
+		HistoryLength:        60,
+		ChartType:            "braille",
+		ViewType:             "normal",
+		SortBy:               "cpu",
+		Theme:                "dark",
+		RefreshRate:          1000,
+		BorderType:           "rounded",
+		BorderStyle:          "dashed",
+		BackgroundOpaque:     true,
+		ProcessCpuNormalized: true,
+		Tabs:                 []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"},
 		Thresholds: map[MetricType]float64{
 			MetricCPU:  90.0,
 			MetricMem:  90.0,
@@ -162,6 +164,11 @@ func LoadConfig() (AppConfig, error) {
 	}
 	if config.BorderStyle == "" {
 		config.BorderStyle = defaults.BorderStyle
+	}
+
+	// Ensure defaults for HealthWeights if missing (zero value check)
+	if config.HealthWeights.CpuCritical == 0 {
+		config.HealthWeights = defaults.HealthWeights
 	}
 
 	return config, nil

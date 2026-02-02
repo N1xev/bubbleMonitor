@@ -70,7 +70,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		{"History Length:", fmt.Sprintf("%ds", s.HistoryLength), 7},
 		{"Process CPU:", "Raw", 8},
 	}
-	if s.ProcessCpuNormalized {
+	if s.Config.ProcessCpuNormalized {
 		displayItems[4].value = "Normalized"
 	}
 

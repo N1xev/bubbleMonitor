@@ -284,6 +284,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "n":
 			m.ProcessCpuNormalized = !m.ProcessCpuNormalized
+			m.Config.ProcessCpuNormalized = m.ProcessCpuNormalized
+			config.SaveConfig(m.Config)
 			status := "Raw (>100%)"
 			if m.ProcessCpuNormalized {
 				status = "Normalized (0-100%)"
@@ -872,6 +874,7 @@ func (m *Model) handleSettingsChange(dir int) {
 
 	case 8: // Process CPU Normalized
 		m.ProcessCpuNormalized = !m.ProcessCpuNormalized
+		m.Config.ProcessCpuNormalized = m.ProcessCpuNormalized
 
 	case 9, 10, 11, 12, 13, 14: // Tabs
 		allTabs := []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System"}
