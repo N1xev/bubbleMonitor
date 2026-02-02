@@ -26,11 +26,47 @@ var (
 	}
 )
 
-func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
+type chartStyleCache struct {
+	theme  string
+	styles map[string]lipgloss.Style
+}
+
+var chartCache = &chartStyleCache{
+	styles: make(map[string]lipgloss.Style),
+}
+
+func getChartStyle(color compat.AdaptiveColor, theme string) lipgloss.Style {
+	if chartCache.theme != theme {
+		chartCache.theme = theme
+		chartCache.styles = make(map[string]lipgloss.Style)
+	}
+
+	key := fmt.Sprintf("%v", color)
+	if style, ok := chartCache.styles[key]; ok {
+		return style
+	}
+
+	style := lipgloss.NewStyle().Foreground(color)
+	chartCache.styles[key] = style
+	return style
+}
+
+func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
 	if data.Len() == 0 {
 		return "No data"
 	}
 	chars := []string{" ", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
+
+	// Pre-render all characters with both colors
+	renderedC1 := make([]string, len(chars))
+	renderedC2 := make([]string, len(chars))
+	style1 := getChartStyle(c1, theme)
+	style2 := getChartStyle(c2, theme)
+	for i, ch := range chars {
+		renderedC1[i] = style1.Render(ch)
+		renderedC2[i] = style2.Render(ch)
+	}
+
 	maxV := fixedMax
 	if maxV <= 0 {
 		maxV = data.Max()
@@ -39,7 +75,7 @@ func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		maxV = 1
 	}
 	var result strings.Builder
-	result.Grow(width * 4) // Pre-allocate for UTF-8 chars
+	result.Grow(width * 12) // Pre-allocate for styled UTF-8 chars
 	startIdx := 0
 	if data.Len() > width {
 		startIdx = data.Len() - width
@@ -54,20 +90,22 @@ func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		if chIdx < 0 {
 			chIdx = 0
 		}
-		color := c1
+
 		if val > 70 {
-			color = c2
+			result.WriteString(renderedC2[chIdx])
+		} else {
+			result.WriteString(renderedC1[chIdx])
 		}
-		result.WriteString(lipgloss.NewStyle().Foreground(color).Render(chars[chIdx]))
 	}
 
+	rSpace := style1.Render(" ")
 	for i := data.Len(); i < width; i++ {
-		result.WriteString(" ")
+		result.WriteString(rSpace)
 	}
 	return result.String()
 }
 
-func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
+func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"
 	}
@@ -115,16 +153,20 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 	}
 
 	lines := make([]string, 0, height)
+	style1 := getChartStyle(c1, theme)
+	style2 := getChartStyle(c2, theme)
+	rSpace := style1.Render(" ")
+	rBlock := style2.Render("█")
+
 	for r := 0; r < height; r++ {
 		var line strings.Builder
-		line.Grow(width * 10) // Estimate for styled chars
+		line.Grow(width * 12) // Estimate for styled chars
 		for c := 0; c < width; c++ {
-			char := grid[r][c]
-			color := c1
-			if char == "█" {
-				color = c2
+			if grid[r][c] == "█" {
+				line.WriteString(rBlock)
+			} else {
+				line.WriteString(rSpace)
 			}
-			line.WriteString(lipgloss.NewStyle().Foreground(color).Render(char))
 		}
 		lines = append(lines, line.String())
 	}
@@ -135,7 +177,7 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 	return strings.Join(lines, "\n")
 }
 
-func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
+func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
 	if data.Len() == 0 {
 		return "No data"
 	}
@@ -154,6 +196,9 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 		count = height
 	}
 
+	style1 := getChartStyle(c1, theme)
+	style2 := getChartStyle(c2, theme)
+
 	lines := make([]string, 0, count)
 	for i := startIdx; i < data.Len(); i++ {
 		val := data.Get(i)
@@ -162,20 +207,20 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 			barLen = 0
 		}
 
-		color := c1
-		if val > 70 {
-			color = c2
-		}
-
 		label := fmt.Sprintf("%5.1f%% ", val)
-		bar := lipgloss.NewStyle().Foreground(color).Render(strings.Repeat("█", barLen))
+		var bar string
+		if val > 70 {
+			bar = style2.Render(strings.Repeat("█", barLen))
+		} else {
+			bar = style1.Render(strings.Repeat("█", barLen))
+		}
 		lines = append(lines, label+bar)
 	}
 
 	return strings.Join(lines, "\n")
 }
 
-func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
+func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"
 	}
@@ -225,6 +270,9 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 		}
 	}
 
+	style1 := getChartStyle(c1, theme)
+	style2 := getChartStyle(c2, theme)
+
 	lines := make([]string, 0, height)
 	for charRow := 0; charRow < height; charRow++ {
 		var line strings.Builder
@@ -264,11 +312,14 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 			}
 			line.WriteRune(braille)
 		}
-		color := c1
+
+		var renderedLine string
 		if charRow < height/2 {
-			color = c2
+			renderedLine = style2.Render(line.String())
+		} else {
+			renderedLine = style1.Render(line.String())
 		}
-		lines = append(lines, lipgloss.NewStyle().Foreground(color).Render(line.String()))
+		lines = append(lines, renderedLine)
 	}
 
 	*gridPtr = dots
