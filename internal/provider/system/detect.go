@@ -1,6 +1,7 @@
 package system
 
 import (
+	"log"
 	"os/exec"
 	"runtime"
 	"sync/atomic"
@@ -63,7 +64,9 @@ func getCapabilities() *data.HardwareCapabilities {
 
 func detectNvidia() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("NVIDIA detection panicked: %v", r)
+		}
 	}()
 
 	ensureNVML()
@@ -83,7 +86,9 @@ func detectNvidia() {
 
 func detectAmd() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("AMD detection panicked: %v", r)
+		}
 	}()
 
 	if runtime.GOOS != "linux" {
@@ -100,7 +105,9 @@ func detectAmd() {
 
 func detectBattery() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("Battery detection panicked: %v", r)
+		}
 	}()
 
 	_, err := exec.LookPath("upower")
@@ -116,7 +123,9 @@ func detectBattery() {
 
 func detectNetwork() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("Network detection panicked: %v", r)
+		}
 	}()
 
 	interfaces, err := net.IOCounters(false)
@@ -127,7 +136,9 @@ func detectNetwork() {
 
 func detectDiskIO() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("DiskIO detection panicked: %v", r)
+		}
 	}()
 
 	_, err := disk.IOCounters()
@@ -138,7 +149,9 @@ func detectDiskIO() {
 
 func detectTemp() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("Temperature detection panicked: %v", r)
+		}
 	}()
 
 	sensors, err := host.SensorsTemperatures()
@@ -149,7 +162,9 @@ func detectTemp() {
 
 func detectServices() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("Services detection panicked: %v", r)
+		}
 	}()
 
 	if runtime.GOOS == "linux" {
@@ -164,7 +179,9 @@ func detectServices() {
 
 func detectContainers() {
 	defer func() {
-		_ = recover()
+		if r := recover(); r != nil {
+			log.Printf("Container detection panicked: %v", r)
+		}
 	}()
 
 	dockerDetected.Store(HasDocker())

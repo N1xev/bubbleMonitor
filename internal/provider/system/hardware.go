@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -50,7 +51,9 @@ func HostInfoCmd() tea.Cmd {
 func GpuInfoCmd() tea.Cmd {
 	return func() tea.Msg {
 		defer func() {
-			_ = recover()
+			if r := recover(); r != nil {
+				log.Printf("GPU info command panicked: %v", r)
+			}
 		}()
 
 		ensureNVML()

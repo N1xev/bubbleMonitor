@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 
@@ -12,7 +13,6 @@ import (
 
 var (
 	nvmlInitialized   bool
-	nvmlErrorMsg      string
 	nvmlInitAttempted atomic.Bool
 	nvmlInitOnce      sync.Once
 )
@@ -25,13 +25,6 @@ func ensureNVML() {
 		nvmlInitAttempted.Store(true)
 		ret := nvml.Init()
 		if ret != nvml.SUCCESS {
-			if ret == nvml.ERROR_LIB_RM_VERSION_MISMATCH {
-				nvmlErrorMsg = "NVIDIA driver version mismatch - reboot required"
-			} else if ret == nvml.ERROR_LIBRARY_NOT_FOUND {
-				nvmlErrorMsg = "NVIDIA library not found (try LD_LIBRARY_PATH)"
-			} else {
-				nvmlErrorMsg = fmt.Sprintf("NVML init failed: %v", ret)
-			}
 			nvmlInitialized = false
 		} else {
 			nvmlInitialized = true
@@ -41,7 +34,9 @@ func ensureNVML() {
 
 func fetchNvidiaGpus() []data.GpuInfo {
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			log.Printf("NVIDIA GPU detection panicked: %v", r)
+		}
 	}()
 
 	var gpuList []data.GpuInfo

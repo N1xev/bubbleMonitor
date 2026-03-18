@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/hhk7734/amdsmi.go"
 
@@ -10,7 +11,9 @@ import (
 
 func fetchAmdGpus() []data.GpuInfo {
 	defer func() {
-		recover()
+		if r := recover(); r != nil {
+			log.Printf("AMD GPU detection panicked: %v", r)
+		}
 	}()
 
 	var gpuList []data.GpuInfo
