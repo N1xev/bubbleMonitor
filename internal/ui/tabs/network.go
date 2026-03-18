@@ -1,7 +1,7 @@
 package tabs
 
 import (
-	"fmt"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
@@ -11,13 +11,24 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/util"
 )
 
+var networkLabels = struct {
+	rxTotal, txTotal, rxRate, txRate, err, drop string
+}{
+	rxTotal: "Rx Total:",
+	txTotal: "Tx Total:",
+	rxRate:  "Rx Rate:",
+	txRate:  "Tx Rate:",
+	err:     "Errors:",
+	drop:    "Dropped:",
+}
+
 // RenderNetwork renders the network interfaces tab
 func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, t, mu, p, b, bg compat.AdaptiveColor, availHeight int) string {
-	if len(s.NetworkInterfaces) == 0 {
+	if len(s.Metrics.NetworkInterfaces) == 0 {
 		return "Loading network interfaces..."
 	}
 
-	width := s.Width
+	width := s.UI.Width
 	cols := 1
 	if width >= 80 {
 		cols = 2
@@ -27,15 +38,21 @@ func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueSty
 	}
 
 	colWidths := util.CalculateColumnWidths(width, cols)
-	border := widgets.GetBorder(s.BorderStyle, s.BorderType)
+	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
-	fwLine := func(str string, w int) string {
-		return util.FullWidthBg(str, w)
-	}
+	rxTotalLabel := labelStyle.Render(networkLabels.rxTotal)
+	txTotalLabel := labelStyle.Render(networkLabels.txTotal)
+	rxRateLabel := labelStyle.Render(networkLabels.rxRate)
+	txRateLabel := labelStyle.Render(networkLabels.txRate)
+	errLabel := labelStyle.Render(networkLabels.err)
+	dropLabel := labelStyle.Render(networkLabels.drop)
+
+	sb := &s.UI.ContentBuilder
 
 	var netBlocks []string
-	for i, nic := range s.NetworkInterfaces {
-		cW := colWidths[i%cols] - 4
+	for i, nic := range s.Metrics.NetworkInterfaces {
+		cW := colWidths[i%cols] - 6
+		sb.Reset()
 
 		// Check for inactivity
 		if nic.BytesRecv == 0 && nic.BytesSent == 0 {
@@ -51,7 +68,7 @@ func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueSty
 		}
 
 		var rxRate, txRate float64
-		if last, ok := s.LastNetworkInterfaces[nic.Name]; ok {
+		if last, ok := s.Metrics.LastNetworkInterfaces[nic.Name]; ok {
 			if nic.BytesRecv >= last.BytesRecv {
 				rxRate = float64(nic.BytesRecv-last.BytesRecv) / 1024 / 1024
 			}
@@ -60,14 +77,54 @@ func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueSty
 			}
 		}
 
-		stats := lipgloss.JoinVertical(lipgloss.Left,
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Rx Total: ")+valueStyle.Render(util.FormatBytes(nic.BytesRecv))), cW),
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Tx Total: ")+valueStyle.Render(util.FormatBytes(nic.BytesSent))), cW),
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Rx Rate:  ")+valueStyle.Render(fmt.Sprintf("%.2f MB/s", rxRate))), cW),
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Tx Rate:  ")+valueStyle.Render(fmt.Sprintf("%.2f MB/s", txRate))), cW),
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Errors:   ")+valueStyle.Render(fmt.Sprintf("In:%d Out:%d", nic.Errin, nic.Errout))), cW),
-			fwLine(lipgloss.JoinHorizontal(lipgloss.Top, labelStyle.Render("Dropped:  ")+valueStyle.Render(fmt.Sprintf("In:%d Out:%d", nic.Dropin, nic.Dropout))), cW),
-		)
+		rxTotalVal := util.FormatBytes(nic.BytesRecv)
+		sb.WriteString(rxTotalLabel)
+		sb.WriteString(valueStyle.Render(rxTotalVal))
+		if p := cW - 10 - len(rxTotalVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+		sb.WriteString("\n")
+
+		txTotalVal := util.FormatBytes(nic.BytesSent)
+		sb.WriteString(txTotalLabel)
+		sb.WriteString(valueStyle.Render(txTotalVal))
+		if p := cW - 10 - len(txTotalVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+		sb.WriteString("\n")
+
+		rxRateVal := util.FastMbPerSec(rxRate)
+		sb.WriteString(rxRateLabel)
+		sb.WriteString(valueStyle.Render(rxRateVal))
+		if p := cW - 10 - len(rxRateVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+		sb.WriteString("\n")
+
+		txRateVal := util.FastMbPerSec(txRate)
+		sb.WriteString(txRateLabel)
+		sb.WriteString(valueStyle.Render(txRateVal))
+		if p := cW - 10 - len(txRateVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+		sb.WriteString("\n")
+
+		errVal := "In:" + util.FastUint64(nic.Errin) + " Out:" + util.FastUint64(nic.Errout)
+		sb.WriteString(errLabel)
+		sb.WriteString(valueStyle.Render(errVal))
+		if p := cW - 10 - len(errVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+		sb.WriteString("\n")
+
+		dropVal := "In:" + util.FastUint64(nic.Dropin) + " Out:" + util.FastUint64(nic.Dropout)
+		sb.WriteString(dropLabel)
+		sb.WriteString(valueStyle.Render(dropVal))
+		if p := cW - 10 - len(dropVal); p > 0 {
+			sb.WriteString(strings.Repeat(" ", p))
+		}
+
+		stats := sb.String()
 
 		c := container.Width(colWidths[i%cols]).Height(8).BorderTop(false)
 		body := c.Render(lipgloss.NewStyle().MarginTop(1).Render(stats))
@@ -78,10 +135,7 @@ func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueSty
 
 	var rows []string
 	for i := 0; i < len(netBlocks); i += cols {
-		end := i + cols
-		if end > len(netBlocks) {
-			end = len(netBlocks)
-		}
+		end := min(i+cols, len(netBlocks))
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, netBlocks[i:end]...))
 	}
 

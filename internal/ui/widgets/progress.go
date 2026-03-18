@@ -1,10 +1,15 @@
 package widgets
 
 import (
-	"strings"
-
-	"charm.land/lipgloss/v2"
+	"charm.land/bubbles/v2/progress"
 	"charm.land/lipgloss/v2/compat"
+)
+
+// Pre-configured progress model with exact same characters as original implementation
+// Using '█' (full block) for filled and '░' (light shade) for empty
+var progressBar = progress.New(
+	progress.WithFillCharacters('█', '░'),
+	progress.WithoutPercentage(),
 )
 
 // GetColorForValue returns a color based on the value threshold
@@ -17,10 +22,8 @@ func GetColorForValue(val float64, su, w, a compat.AdaptiveColor) compat.Adaptiv
 	return a
 }
 
-// Pre-allocate the empty style as it's constant
-var emptyStyle = lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#E5E7EB"), Dark: lipgloss.Color("#374151")})
-
-// RenderProgressBar creates a colored progress bar
+// RenderProgressBar creates a colored progress bar using Bubbles progress.Model
+// Maintains exact same visual output as original implementation
 func RenderProgressBar(val float64, width int, su, w, a compat.AdaptiveColor) string {
 	if val < 0 {
 		val = 0
@@ -28,15 +31,18 @@ func RenderProgressBar(val float64, width int, su, w, a compat.AdaptiveColor) st
 	if val > 100 {
 		val = 100
 	}
-	filled := int(val / 100 * float64(width))
-	if filled > width {
-		filled = width
-	}
-	empty := width - filled
+
+	// Set width dynamically
+	progressBar.SetWidth(width)
+
+	// Set colors based on value thresholds
+	// AdaptiveColor.Dark is a color.Color, and lipgloss.Color IS color.Color
+	// So we can use type assertion
 	color := GetColorForValue(val, su, w, a)
+	progressBar.FullColor = color.Dark
+	progressBar.EmptyColor = color.Light
 
-	// Create filled style on demand (color varies), but reuse emptyStyle
-	filledStyle := lipgloss.NewStyle().Foreground(color)
-
-	return filledStyle.Render(strings.Repeat("█", filled)) + emptyStyle.Render(strings.Repeat("░", empty))
+	// ViewAs renders at the given percentage without needing Update cycle
+	// Dividing by 100 because ViewAs expects 0.0-1.0 range
+	return progressBar.ViewAs(val / 100)
 }

@@ -1,0 +1,61 @@
+project_name: bubbleMonitor
+
+binary_names:
+  - bub
+
+before:
+  hooks:
+    - go generate ./...
+
+builds:
+  - id: bubbleMonitor
+    main: ./cmd/bub
+    binary: bub
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - v6
+      - v7
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: x86_64
+      arm64: aarch64
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+
+checksum:
+  name_template: 'checksums.txt'
+
+release:
+  github:
+    owner: N1xev
+    name: bubbleMonitor
+  draft: false
+  prerelease: auto
+  name_template: '{{.Tag}}'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^refactor:'

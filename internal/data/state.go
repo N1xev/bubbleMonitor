@@ -3,197 +3,105 @@ package data
 import (
 	"sync"
 	"time"
-
-	"github.com/N1xev/bubbleMonitor/internal/config"
-	"github.com/distatus/battery"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
-	"github.com/shirou/gopsutil/v3/load"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
 )
 
 type AppState struct {
-	Width          int
-	Height         int
-	Cpu            float64
-	CpuPerCore     []float64
-	Memory         float64
-	Disk           float64
-	Swap           float64
-	HistoryLength  int
-	CpuHistory     *RingBuffer
-	MemHistory     *RingBuffer
-	NetHistory     *RingBuffer
-	SwapHistory    *RingBuffer
-	SelectedTab    int
-	Processes      []ProcessInfo
-	LastNetSent    uint64
-	LastNetRecv    uint64
-	NetSentRate    float64
-	NetRecvRate    float64
-	HostInfo       *host.InfoStat
-	DiskPartitions []DiskPartition
-	SortBy         string
-	LoadAvg        *load.AvgStat
-	StartTime      time.Time
-	Paused         bool
-	ShowHelp       bool
-	GpuInfo        []GpuInfo
-	MemInfo        *mem.VirtualMemoryStat
-	SwapInfo       *mem.SwapMemoryStat
-	CpuInfoStatic  []cpu.InfoStat
+	Metrics MetricsState
+	Process ProcessState
+	UI      UIState
+	Config  ConfigState
+	Remote  RemoteState
 
-	Sensors     []host.TemperatureStat
-	CpuTemp     float64
-	HistoryTemp *RingBuffer
-
-	NetworkInterfaces     []net.IOCountersStat
-	LastNetworkInterfaces map[string]net.IOCountersStat
-
-	Battery []*battery.Battery
-
-	DiskIO        map[string]disk.IOCountersStat
-	LastDiskIO    map[string]disk.IOCountersStat
-	DiskReadRate  float64
-	DiskWriteRate float64
-	DiskHORead    *RingBuffer
-	DiskHOWrite   *RingBuffer
-
-	SelectedProcess     int
-	ProcessCount        int // Lightweight count for Overview
-	ProcessScrollOffset int
-	ProcessFilter       string
-	FilterMode          bool
-	ShowKillDialog      bool
-	KillTargetPid       int32
-	KillTargetName      string
-
-	Config       config.AppConfig
-	AlertManager *AlertManager
-	ShowSettings bool
-	SettingsEdit bool
-	SettingsSel  config.MetricType
-	SettingsIdx  int
-
-	LastError     string
+	OpenFilesView SimpleViewport
 	LastErrorTime time.Time
-	TickCount     uint64
 
-	Toasts      []Toast
-	NextToastID int64
-
-	SuspendedState map[int32]bool
-	stateMu        sync.RWMutex
-
-	ShowOpenFiles         bool
-	OpenFilesList         []process.OpenFilesStat
-	OpenFilesPid          int32
-	OpenFilesScrollOffset int
-	OpenFilesView         SimpleViewport
-
-	Services      []ServiceInfo
-	Connections   []ConnectionInfo
-	SystemLogs    []string
-	RemoteUptimes map[string]string
-
-	TreeView       bool
-	CollapsedPids  map[int32]bool
-	BookmarkedPids map[int32]bool
-
-	CachedVisibleProcs []ProcessInfo
-	CachedTreeIndents  map[int32]int
-	ProcessCacheDirty  bool
-
-	ChartType string
-
-	Theme                string
-	RefreshRate          int
-	BorderType           string
-	BorderStyle          string
-	BackgroundOpaque     bool
-	ProcessCpuNormalized bool // Toggle between Raw (>100%) and Normalized (0-100%)
-	LastConfigModTime    time.Time
-	ActiveTabs           []string
-
-	CpuCoreScrollOffset int
-
-	ProcessHistory map[int32]*RingBuffer
-	HealthScore    int
+	stateMu sync.RWMutex
 }
 
 func (s *AppState) SetSuspended(pid int32, suspended bool) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
 	if suspended {
-		s.SuspendedState[pid] = true
+		s.Process.SuspendedState[pid] = true
 	} else {
-		delete(s.SuspendedState, pid)
+		delete(s.Process.SuspendedState, pid)
 	}
 }
 
 func (s *AppState) IsSuspended(pid int32) bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	return s.SuspendedState[pid]
+	return s.Process.SuspendedState[pid]
 }
 
 func (s *AppState) ToggleCollapsed(pid int32) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	s.CollapsedPids[pid] = !s.CollapsedPids[pid]
+	s.Process.CollapsedPids[pid] = !s.Process.CollapsedPids[pid]
 }
 
 func (s *AppState) IsCollapsed(pid int32) bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	return s.CollapsedPids[pid]
+	return s.Process.CollapsedPids[pid]
 }
 
 func (s *AppState) ToggleBookmark(pid int32) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	s.BookmarkedPids[pid] = !s.BookmarkedPids[pid]
+	s.Process.BookmarkedPids[pid] = !s.Process.BookmarkedPids[pid]
 }
 
 func (s *AppState) IsBookmarked(pid int32) bool {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	return s.BookmarkedPids[pid]
+	return s.Process.BookmarkedPids[pid]
+}
+
+func (s *AppState) GetProcessByPid(pid int32) (ProcessInfo, bool) {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	p, ok := s.Process.ProcessesByPid[pid]
+	return p, ok
+}
+
+func (s *AppState) SyncProcessesMap() {
+	s.Process.ProcessesByPid = make(map[int32]ProcessInfo, len(s.Process.Processes))
+	for _, p := range s.Process.Processes {
+		s.Process.ProcessesByPid[p.Pid] = p
+	}
 }
 
 func (s *AppState) ClearProcessMaps() {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	for pid := range s.SuspendedState {
-		delete(s.SuspendedState, pid)
+	for pid := range s.Process.SuspendedState {
+		delete(s.Process.SuspendedState, pid)
 	}
-	for pid := range s.CollapsedPids {
-		delete(s.CollapsedPids, pid)
+	for pid := range s.Process.CollapsedPids {
+		delete(s.Process.CollapsedPids, pid)
 	}
-	for pid := range s.BookmarkedPids {
-		delete(s.BookmarkedPids, pid)
+	for pid := range s.Process.BookmarkedPids {
+		delete(s.Process.BookmarkedPids, pid)
 	}
 }
 
 func (s *AppState) PruneDeadProcessMaps(alivePids map[int32]bool) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	for pid := range s.SuspendedState {
+	for pid := range s.Process.SuspendedState {
 		if !alivePids[pid] {
-			delete(s.SuspendedState, pid)
+			delete(s.Process.SuspendedState, pid)
 		}
 	}
-	for pid := range s.CollapsedPids {
+	for pid := range s.Process.CollapsedPids {
 		if !alivePids[pid] {
-			delete(s.CollapsedPids, pid)
+			delete(s.Process.CollapsedPids, pid)
 		}
 	}
-	for pid := range s.BookmarkedPids {
+	for pid := range s.Process.BookmarkedPids {
 		if !alivePids[pid] {
-			delete(s.BookmarkedPids, pid)
+			delete(s.Process.BookmarkedPids, pid)
 		}
 	}
 }
@@ -201,25 +109,25 @@ func (s *AppState) PruneDeadProcessMaps(alivePids map[int32]bool) {
 func (s *AppState) GetOrCreateHistory(pid int32) *RingBuffer {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	if _, ok := s.ProcessHistory[pid]; !ok {
-		s.ProcessHistory[pid] = NewRingBuffer(s.HistoryLength)
+	if _, ok := s.Metrics.ProcessHistory[pid]; !ok {
+		s.Metrics.ProcessHistory[pid] = NewRingBuffer(s.Config.HistoryLength)
 	}
-	return s.ProcessHistory[pid]
+	return s.Metrics.ProcessHistory[pid]
 }
 
 func (s *AppState) GetHistory(pid int32) (*RingBuffer, bool) {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
-	hist, ok := s.ProcessHistory[pid]
+	hist, ok := s.Metrics.ProcessHistory[pid]
 	return hist, ok
 }
 
 func (s *AppState) PruneDeadProcessHistory(alivePids map[int32]bool) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	for pid := range s.ProcessHistory {
+	for pid := range s.Metrics.ProcessHistory {
 		if !alivePids[pid] {
-			delete(s.ProcessHistory, pid)
+			delete(s.Metrics.ProcessHistory, pid)
 		}
 	}
 }

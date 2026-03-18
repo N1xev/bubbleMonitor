@@ -20,84 +20,103 @@ type TickMsg time.Time
 
 // CpuMemMsg contains fast-updating metrics (CPU, Memory, Swap)
 type CpuMemMsg struct {
-	Cpu        float64
-	CpuPerCore []float64
-	Memory     float64
-	Swap       float64
 	LoadAvg    *load.AvgStat
 	MemInfo    *mem.VirtualMemoryStat
 	SwapInfo   *mem.SwapMemoryStat
 	Err        error
+	CpuPerCore []float64
+	Cpu        float64
+	Memory     float64
+	Swap       float64
 }
 
 // DiskNetMsg contains slow-updating metrics (Disk, Network)
 type DiskNetMsg struct {
+	Err     error
 	Disk    float64
 	NetSent uint64
 	NetRecv uint64
-	Err     error
 }
 
 type MetricsMsg struct {
-	Cpu        float64
+	LoadAvg    *load.AvgStat
+	MemInfo    *mem.VirtualMemoryStat
+	SwapInfo   *mem.SwapMemoryStat
 	CpuPerCore []float64
+	Cpu        float64
 	Memory     float64
 	Disk       float64
 	Swap       float64
 	NetSent    uint64
 	NetRecv    uint64
-	LoadAvg    *load.AvgStat
-	MemInfo    *mem.VirtualMemoryStat // Cached for render
-	SwapInfo   *mem.SwapMemoryStat    // Cached for render
 }
 
 type ProcessesMsg []data.ProcessInfo
 type ProcessCountMsg int
 
 type HostInfoMsg struct {
-	Info *host.InfoStat
 	Err  error
+	Info *host.InfoStat
 }
 
 type DiskInfoMsg struct {
-	Partitions []data.DiskPartition
 	Err        error
+	Partitions []data.DiskPartition
 }
 
-type GpuInfoMsg []data.GpuInfo
+type GpuInfoMsg struct {
+	Err  error
+	Gpus []data.GpuInfo
+}
 type DiskIOMsg map[string]disk.IOCountersStat
 type TempMsg []host.TemperatureStat
 
 type NetworkInterfacesMsg struct {
-	Interfaces []net.IOCountersStat
 	Err        error
+	Interfaces []net.IOCountersStat
 }
 type BatteryMsg []*battery.Battery
 type ServicesMsg []data.ServiceInfo
 type ConnectionsMsg []data.ConnectionInfo
 type SysLogMsg []string
 type RemoteMsg struct {
-	Host   string
-	Output string
+	Metrics data.RemoteHostMetrics
+	Host    string
 }
 
 // Control Messages
 type PriorityChangeMsg struct {
+	Err      error
 	Pid      int32
 	Priority int32
-	Err      error
 }
 
 type ProcessControlMsg struct {
-	Pid    int32
-	Action string // "suspend" or "resume"
 	Err    error
+	Action string // "suspend" or "resume"
+	Pid    int32
 }
 
 type OpenFilesMsg struct {
-	Pid   int32
-	Files []process.OpenFilesStat
 	Err   error
+	Files []process.OpenFilesStat
+	Pid   int32
+}
+
+type OpenFilesRequestMsg struct {
+	Pid int32
+}
+
+// ProcessCmdlineMsg is sent when cmdline is fetched lazily
+type ProcessCmdlineMsg struct {
+	Pid     int32
+	Cmdline string
+}
+
+// ProcessUsernameMsg is sent when username is fetched lazily
+type ProcessUsernameMsg struct {
+	Pid      int32
+	Username string
 }
 
 // Toast Messages
@@ -111,9 +130,27 @@ type ToastTimeoutMsg struct {
 	ID int64
 }
 
+type QuitMsg struct{}
+
 // KillProcessMsg is sent when a process kill is requested
 type KillProcessMsg struct {
+	Error   string
 	Pid     int32
 	Success bool
-	Error   string
+}
+
+// ContainerInfoMsg contains container metrics (Docker/Kubernetes)
+type ContainerInfoMsg struct {
+	Err           error
+	Containers    []data.ContainerInfo
+	Pods          []data.K8sPodInfo
+	HasDocker     bool
+	HasKubernetes bool
+}
+
+// VmInfoMsg contains VM/hypervisor metrics
+type VmInfoMsg struct {
+	Err    error
+	VmInfo *data.VmInfo
+	IsVM   bool
 }

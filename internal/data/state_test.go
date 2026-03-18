@@ -7,11 +7,17 @@ import (
 
 func TestAppStateConcurrentMapAccess(t *testing.T) {
 	state := &AppState{
-		SuspendedState: make(map[int32]bool),
-		CollapsedPids:  make(map[int32]bool),
-		BookmarkedPids: make(map[int32]bool),
-		ProcessHistory: make(map[int32]*RingBuffer),
-		HistoryLength:  100,
+		Process: ProcessState{
+			SuspendedState: make(map[int32]bool),
+			CollapsedPids:  make(map[int32]bool),
+			BookmarkedPids: make(map[int32]bool),
+		},
+		Metrics: MetricsState{
+			ProcessHistory: make(map[int32]*RingBuffer),
+		},
+		UI: UIState{
+			HistoryLength: 100,
+		},
 	}
 
 	const numGoroutines = 10
@@ -97,11 +103,17 @@ func TestAppStateConcurrentMapAccess(t *testing.T) {
 
 func TestAppStatePruneDeadProcessMaps(t *testing.T) {
 	state := &AppState{
-		SuspendedState: make(map[int32]bool),
-		CollapsedPids:  make(map[int32]bool),
-		BookmarkedPids: make(map[int32]bool),
-		ProcessHistory: make(map[int32]*RingBuffer),
-		HistoryLength:  100,
+		Process: ProcessState{
+			SuspendedState: make(map[int32]bool),
+			CollapsedPids:  make(map[int32]bool),
+			BookmarkedPids: make(map[int32]bool),
+		},
+		Metrics: MetricsState{
+			ProcessHistory: make(map[int32]*RingBuffer),
+		},
+		UI: UIState{
+			HistoryLength: 100,
+		},
 	}
 
 	state.SetSuspended(100, true)
@@ -146,8 +158,12 @@ func TestAppStatePruneDeadProcessMaps(t *testing.T) {
 
 func TestAppStatePruneDeadProcessHistory(t *testing.T) {
 	state := &AppState{
-		ProcessHistory: make(map[int32]*RingBuffer),
-		HistoryLength:  100,
+		Metrics: MetricsState{
+			ProcessHistory: make(map[int32]*RingBuffer),
+		},
+		UI: UIState{
+			HistoryLength: 100,
+		},
 	}
 
 	state.GetOrCreateHistory(100)

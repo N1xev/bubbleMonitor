@@ -37,18 +37,24 @@ func SaveSnapshotCmd(cpu, memory, disk float64, processCount int) tea.Cmd {
 		if err != nil {
 			return msg.ToastMsg{Message: fmt.Sprintf("Failed to open file %s: %v", path, err), Level: data.ToastError, Duration: 3 * time.Second}
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		encoder := json.NewEncoder(file)
-		if err := encoder.Encode(snapshot); err != nil {
-			return msg.ToastMsg{Message: fmt.Sprintf("Failed to write snapshot: %v", err), Level: data.ToastError, Duration: 3 * time.Second}
+		if encErr := encoder.Encode(snapshot); encErr != nil {
+			return msg.ToastMsg{Message: fmt.Sprintf("Failed to write snapshot: %v", encErr), Level: data.ToastError, Duration: 3 * time.Second}
 		}
 
-		csvPath, _ := configpkg.ResolvePath("", "bubble_snapshot.csv")
+		csvPath, err := configpkg.ResolvePath("", "bubble_snapshot.csv")
+		if err != nil {
+			csvPath = "bubble_snapshot.csv"
+		}
 		csvFile, err := os.OpenFile(csvPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err == nil {
-			defer csvFile.Close()
-			stat, _ := csvFile.Stat()
+			defer func() { _ = csvFile.Close() }()
+			stat, err := csvFile.Stat()
+			if err != nil {
+				return msg.ToastMsg{Message: fmt.Sprintf("Failed to stat CSV: %v", err), Level: data.ToastError, Duration: 3 * time.Second}
+			}
 			if stat != nil && stat.Size() == 0 {
 				if _, err := csvFile.WriteString("Timestamp,CPU,Memory,Disk,Processes\n"); err != nil {
 					return msg.ToastMsg{Message: "Failed to write CSV header: " + err.Error(), Level: data.ToastError, Duration: 3 * time.Second}

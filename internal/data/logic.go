@@ -1,8 +1,8 @@
 package data
 
 import (
-	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -13,28 +13,28 @@ type treeBuilder struct {
 }
 
 func (s *AppState) GetVisibleProcesses() ([]ProcessInfo, map[int32]int) {
-	if !s.ProcessCacheDirty && s.CachedVisibleProcs != nil {
-		return s.CachedVisibleProcs, s.CachedTreeIndents
+	if !s.Process.ProcessCacheDirty && s.Process.CachedVisibleProcs != nil {
+		return s.Process.CachedVisibleProcs, s.Process.CachedTreeIndents
 	}
 
-	if !s.TreeView {
+	if !s.Process.TreeView {
 		filtered := s.GetFilteredProcesses()
-		s.CachedVisibleProcs = filtered
-		s.CachedTreeIndents = make(map[int32]int)
-		s.ProcessCacheDirty = false
-		return filtered, s.CachedTreeIndents
+		s.Process.CachedVisibleProcs = filtered
+		s.Process.CachedTreeIndents = make(map[int32]int)
+		s.Process.ProcessCacheDirty = false
+		return filtered, s.Process.CachedTreeIndents
 	}
 
 	procs := s.GetFilteredProcesses()
 	visible, indents := s.buildProcessTree(procs)
-	s.CachedVisibleProcs = visible
-	s.CachedTreeIndents = indents
-	s.ProcessCacheDirty = false
+	s.Process.CachedVisibleProcs = visible
+	s.Process.CachedTreeIndents = indents
+	s.Process.ProcessCacheDirty = false
 	return visible, indents
 }
 
 func (s *AppState) InvalidateProcessCache() {
-	s.ProcessCacheDirty = true
+	s.Process.ProcessCacheDirty = true
 }
 
 func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int32]int) {
@@ -89,17 +89,29 @@ func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int
 }
 
 func (s *AppState) GetFilteredProcesses() []ProcessInfo {
-	if s.ProcessFilter == "" {
-		return s.Processes
+	if s.Process.ProcessFilter == "" {
+		return s.Process.Processes
 	}
-	var filtered []ProcessInfo
-	filterLower := strings.ToLower(s.ProcessFilter)
-	for _, p := range s.Processes {
+	filterLower := s.Process.ProcessFilterLower
+	if filterLower == "" {
+		filterLower = strings.ToLower(s.Process.ProcessFilter)
+	}
+	capacity := len(s.Process.Processes) / 2
+	if capacity < 4 {
+		capacity = 4
+	}
+	filtered := make([]ProcessInfo, 0, capacity)
+	for i := range s.Process.Processes {
+		p := &s.Process.Processes[i]
 		if strings.Contains(p.NameLower, filterLower) ||
 			strings.Contains(p.UsernameLower, filterLower) ||
-			strings.Contains(p.CmdlineLower, filterLower) ||
-			strings.Contains(fmt.Sprintf("%d", p.Pid), filterLower) {
-			filtered = append(filtered, p)
+			strings.Contains(p.CmdlineLower, filterLower) {
+			filtered = append(filtered, *p)
+		} else if filterLower != "" {
+			pidStr := strconv.Itoa(int(p.Pid))
+			if strings.Contains(pidStr, filterLower) {
+				filtered = append(filtered, *p)
+			}
 		}
 	}
 	return filtered

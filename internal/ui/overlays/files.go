@@ -12,17 +12,17 @@ import (
 
 // RenderOpenFilesOverlay renders the open files list
 func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg compat.AdaptiveColor) string {
-	boxWidth := 80
+	boxWidth := data.OpenFilesDefaultWidth
 	if boxWidth > width-4 {
 		boxWidth = width - 4
 	}
-	boxHeight := 20
+	boxHeight := data.OpenFilesDefaultHeight
 	if boxHeight > height-4 {
 		boxHeight = height - 4
 	}
 
-	border := widgets.GetBorder(s.BorderStyle, s.BorderType)
-	title := fmt.Sprintf("OPEN FILES (PID %d)", s.OpenFilesPid)
+	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
+	title := fmt.Sprintf("OPEN FILES (PID %d)", s.Process.OpenFilesPid)
 
 	vpWidth := boxWidth - 10
 	vpHeight := boxHeight - 4
@@ -33,8 +33,8 @@ func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg
 		vpHeight = 5
 	}
 
-	s.OpenFilesView.Width = vpWidth
-	s.OpenFilesView.Height = vpHeight
+	s.Process.OpenFilesView.SetWidth(vpWidth)
+	s.Process.OpenFilesView.SetHeight(vpHeight)
 
 	container := lipgloss.NewStyle().
 		Border(border).
@@ -47,7 +47,7 @@ func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg
 	hint := lipgloss.NewStyle().Foreground(mu).Italic(true).Render("↑↓/jk to scroll • O or ESC to close")
 
 	// Render Viewport
-	renderedView := s.OpenFilesView.View()
+	renderedView := s.Process.OpenFilesView.View()
 
 	contentWithHint := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.NewStyle().Foreground(t).Render(renderedView),

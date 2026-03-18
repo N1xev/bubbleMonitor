@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
+	"github.com/N1xev/bubbleMonitor/internal/util"
 )
 
 var (
@@ -24,11 +25,23 @@ var (
 			return &grid
 		},
 	}
+	barCache     = make([]string, 256)
+	barCacheInit bool
 )
 
+func initBarCache() {
+	if barCacheInit {
+		return
+	}
+	barCacheInit = true
+	for i := range barCache {
+		barCache[i] = strings.Repeat("█", i)
+	}
+}
+
 type chartStyleCache struct {
-	theme  string
 	styles map[string]lipgloss.Style
+	theme  string
 }
 
 var chartCache = &chartStyleCache{
@@ -117,8 +130,11 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 		maxV = 1
 	}
 
-	gridPtr := stringGridPool.Get().(*[][]string)
-	grid := *gridPtr
+	gridPtr, ok := stringGridPool.Get().(*[][]string)
+	var grid [][]string
+	if ok {
+		grid = *gridPtr
+	}
 
 	if cap(grid) < height {
 		grid = make([][]string, height)
@@ -181,6 +197,7 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 	if data.Len() == 0 {
 		return "No data"
 	}
+	initBarCache()
 	maxV := fixedMax
 	if maxV <= 0 {
 		maxV = data.Max()
@@ -207,12 +224,17 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 			barLen = 0
 		}
 
-		label := fmt.Sprintf("%5.1f%% ", val)
+		label := util.FastPercent1(val) + " "
 		var bar string
-		if val > 70 {
-			bar = style2.Render(strings.Repeat("█", barLen))
+		if barLen < len(barCache) {
+			bar = barCache[barLen]
 		} else {
-			bar = style1.Render(strings.Repeat("█", barLen))
+			bar = strings.Repeat("█", barLen)
+		}
+		if val > 70 {
+			bar = style2.Render(bar)
+		} else {
+			bar = style1.Render(bar)
 		}
 		lines = append(lines, label+bar)
 	}
@@ -240,7 +262,10 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 		startIdx = data.Len() - sampleWidth
 	}
 
-	gridPtr := boolGridPool.Get().(*[][]bool)
+	gridPtr, ok := boolGridPool.Get().(*[][]bool)
+	if !ok {
+		gridPtr = &[][]bool{}
+	}
 	dots := *gridPtr
 
 	if cap(dots) < dotsPerCol {

@@ -5,10 +5,10 @@ import "time"
 // Provider Limits and Timeouts
 const (
 	// Logging
-	MaxLogLines = 50
+	MaxLogLines = 1000
 
 	// Timeouts
-	SSHTimeoutSeconds = 2 * time.Second
+	SSHTimeout = 2 * time.Second
 
 	// Process Management
 	ProcessListCapacity      = 500

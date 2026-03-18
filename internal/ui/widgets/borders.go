@@ -5,6 +5,8 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
+
+	"github.com/N1xev/bubbleMonitor/internal/util"
 )
 
 // GetBorder returns the lipgloss border for the current style
@@ -59,5 +61,88 @@ func RenderTopBorderWithBg(title string, width int, border lipgloss.Border, bord
 	repeatCount := remainingWidth / hLineWidth
 	middlePart := borderStyle.Render(strings.Repeat(hLine, repeatCount))
 
-	return leftPart + middlePart + rightPart
+	result := leftPart + middlePart + rightPart
+	currentWidth := lipgloss.Width(result)
+	if currentWidth < width {
+		result = leftPart + middlePart + borderStyle.Render(strings.Repeat(border.Top, width-currentWidth)) + rightPart
+	}
+
+	return result
+}
+
+// RenderScrollbar renders a vertical scrollbar on the right side of a container.
+// Returns a string with scrollbar characters: "▄" for scroll position, "│" for track, " " for empty.
+// Only shows if totalItems > visibleItems (there's more content to scroll).
+func RenderScrollbar(totalItems, visibleItems, scrollOffset int, color compat.AdaptiveColor) string {
+	// Don't show scrollbar if all items fit
+	if totalItems <= visibleItems {
+		return ""
+	}
+
+	// Clamp scrollOffset to valid range
+	if scrollOffset < 0 {
+		scrollOffset = 0
+	}
+	maxOffset := totalItems - visibleItems
+	if scrollOffset > maxOffset {
+		scrollOffset = maxOffset
+	}
+
+	// Calculate the scrollbar position
+	// The thumb position should be proportional to scrollOffset
+	scrollableHeight := totalItems - visibleItems
+	thumbPosition := (scrollOffset * (visibleItems - 1)) / scrollableHeight
+
+	// Build the scrollbar string
+	style := lipgloss.NewStyle().Foreground(color)
+	result := ""
+
+	for i := 0; i < visibleItems; i++ {
+		if i == thumbPosition {
+			result += style.Render("▄")
+		} else {
+			result += style.Render("│")
+		}
+		if i < visibleItems-1 {
+			result += "\n"
+		}
+	}
+
+	return result
+}
+
+// RenderScrollbarColumn renders a vertical scrollbar as a fixed-width column.
+// Unlike RenderScrollbar which merges with content lines, this renders a separate
+// column that can be joined horizontally with content.
+func RenderScrollbarColumn(totalItems, visibleItems, scrollOffset int, width int, color compat.AdaptiveColor) string {
+	if totalItems <= visibleItems {
+		return ""
+	}
+
+	if scrollOffset < 0 {
+		scrollOffset = 0
+	}
+	maxOffset := totalItems - visibleItems
+	if scrollOffset > maxOffset {
+		scrollOffset = maxOffset
+	}
+
+	scrollableHeight := totalItems - visibleItems
+	thumbPosition := (scrollOffset * (visibleItems - 1)) / scrollableHeight
+
+	style := lipgloss.NewStyle().Foreground(color)
+
+	var lines []string
+	for i := 0; i < visibleItems; i++ {
+		var char string
+		if i == thumbPosition {
+			char = "▄"
+		} else {
+			char = "│"
+		}
+		padded := util.PadRight(char, width)
+		lines = append(lines, style.Render(padded))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }

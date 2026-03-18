@@ -1,7 +1,6 @@
 package tabs
 
 import (
-	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -41,7 +40,7 @@ func (s *SumAccessor) Max() float64 {
 		return 0
 	}
 	max := 0.0
-	for i := 0; i < length; i++ {
+	for i := range length {
 		v := s.Get(i)
 		if v > max {
 			max = v
@@ -52,7 +51,7 @@ func (s *SumAccessor) Max() float64 {
 
 // RenderMetrics renders the metrics/charts tab
 func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
-	width := app.Width
+	width := app.UI.Width
 
 	chartCols := 1
 	if width >= 100 {
@@ -73,7 +72,7 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 		coreCols = 5
 	}
 
-	numCores := len(app.CpuPerCore)
+	numCores := len(app.Metrics.CpuPerCore)
 	if numCores == 0 {
 		numCores = 1
 	}
@@ -88,35 +87,32 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	}
 
 	numChartRows := (4 + chartCols - 1) / chartCols
-	chartBlockHeight := availChartSpace / numChartRows
-	if chartBlockHeight < 5 {
-		chartBlockHeight = 5
-	}
+	chartBlockHeight := max(availChartSpace/numChartRows, 5)
 
 	textStyle := lipgloss.NewStyle().Foreground(t)
 	chartsTitles := []string{
-		fmt.Sprintf("CPU HISTORY (Window: %ds)", app.HistoryLength),
-		fmt.Sprintf("MEMORY HISTORY (Window: %ds)", app.HistoryLength),
-		fmt.Sprintf("NETWORK ACTIVITY (Window: %ds)", app.HistoryLength),
-		fmt.Sprintf("DISK I/O HISTORY (Window: %ds)", app.HistoryLength),
+		"CPU HISTORY (Window: " + util.FastInt(app.UI.HistoryLength) + "s)",
+		"MEMORY HISTORY (Window: " + util.FastInt(app.UI.HistoryLength) + "s)",
+		"NETWORK ACTIVITY (Window: " + util.FastInt(app.UI.HistoryLength) + "s)",
+		"DISK I/O HISTORY (Window: " + util.FastInt(app.UI.HistoryLength) + "s)",
 	}
 	var renderedCharts []string
 
 	chartWidths := util.CalculateColumnWidths(width, chartCols)
 
 	renderChart := func(data data.Accessor, chartW, chartH int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
-		switch app.ChartType {
+		switch app.UI.ChartType {
 		case "line":
-			return widgets.RenderLineChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
+			return widgets.RenderLineChart(data, chartW, chartH, c1, c2, fixedMax, app.Config.Theme)
 		case "bar":
-			return widgets.RenderBarChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
+			return widgets.RenderBarChart(data, chartW, chartH, c1, c2, fixedMax, app.Config.Theme)
 		default:
 			// Default to Braille (highest resolution)
-			return widgets.RenderBrailleChart(data, chartW, chartH, c1, c2, fixedMax, app.Theme)
+			return widgets.RenderBrailleChart(data, chartW, chartH, c1, c2, fixedMax, app.Config.Theme)
 		}
 	}
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		var boxW int
 		if chartCols == 1 {
 			boxW = width
@@ -124,52 +120,43 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 			boxW = chartWidths[i%chartCols]
 		}
 
-		sparklineH := chartBlockHeight - 3
-		if sparklineH < 1 {
-			sparklineH = 1
-		}
+		sparklineH := max(chartBlockHeight-3, 1)
 
 		contentW := boxW - 4
-		chartW := contentW - 6
-		if chartW < 5 {
-			chartW = 5
-		}
+		chartW := max(contentW, 5)
 
 		var innerBlock string
 
 		switch i {
 		case 0: // CPU
-			ch := renderChart(app.CpuHistory, chartW, sparklineH, p, w, 100.0)
-			stats := fmt.Sprintf("Cur: %.1f%% Avg: %.1f%% Peak: %.1f%%", app.Cpu, app.CpuHistory.Avg(), app.CpuHistory.Max())
+			ch := renderChart(app.Metrics.CpuHistory, chartW, sparklineH, p, w, 100.0)
+			stats := "Cur: " + util.FastPercent1(app.Metrics.Cpu) + " Avg: " + util.FastPercent1(app.Metrics.CpuHistory.Avg()) + " Peak: " + util.FastPercent1(app.Metrics.CpuHistory.Max())
 			innerBlock = lipgloss.JoinVertical(lipgloss.Left, ch, textStyle.Render(stats))
 		case 1: // Mem
-			ch := renderChart(app.MemHistory, chartW, sparklineH, s, w, 100.0)
-			stats := fmt.Sprintf("Cur: %.1f%% Avg: %.1f%% Peak: %.1f%%", app.Memory, app.MemHistory.Avg(), app.MemHistory.Max())
+			ch := renderChart(app.Metrics.MemHistory, chartW, sparklineH, s, w, 100.0)
+			stats := "Cur: " + util.FastPercent1(app.Metrics.Memory) + " Avg: " + util.FastPercent1(app.Metrics.MemHistory.Avg()) + " Peak: " + util.FastPercent1(app.Metrics.MemHistory.Max())
 			innerBlock = lipgloss.JoinVertical(lipgloss.Left, ch, textStyle.Render(stats))
 		case 2: // Net
-			ch := renderChart(app.NetHistory, chartW, sparklineH, su, w, 100.0)
-			stats := fmt.Sprintf("Peak: %.1f%% Recv: %.2f MB/s Sent: %.2f MB/s", app.NetHistory.Max(), app.NetRecvRate, app.NetSentRate)
+			ch := renderChart(app.Metrics.NetHistory, chartW, sparklineH, su, w, 100.0)
+			stats := "Peak: " + util.FastPercent1(app.Metrics.NetHistory.Max()) + " Recv: " + util.FastMbPerSec(app.Metrics.NetRecvRate) + " Sent: " + util.FastMbPerSec(app.Metrics.NetSentRate)
 			innerBlock = lipgloss.JoinVertical(lipgloss.Left, ch, textStyle.Render(stats))
 		case 3: // Disk I/O
-			totalIO := &SumAccessor{A: app.DiskHORead, B: app.DiskHOWrite}
+			totalIO := &SumAccessor{A: app.Metrics.DiskHORead, B: app.Metrics.DiskHOWrite}
 			ch := renderChart(totalIO, chartW, sparklineH, mu, w, 0.0)
-			stats := fmt.Sprintf("Read: %.2f MB/s Write: %.2f MB/s", app.DiskReadRate, app.DiskWriteRate)
+			stats := "Read: " + util.FastMbPerSec(app.Metrics.DiskReadRate) + " Write: " + util.FastMbPerSec(app.Metrics.DiskWriteRate)
 			innerBlock = lipgloss.JoinVertical(lipgloss.Left, ch, textStyle.Render(stats))
 		}
 
 		c := container.Width(boxW).Height(chartBlockHeight - 1).BorderTop(false)
 		body := c.Render(innerBlock)
 
-		topBorder := widgets.RenderTopBorderWithBg(chartsTitles[i], boxW, widgets.GetBorder(app.BorderStyle, app.BorderType), b, p)
+		topBorder := widgets.RenderTopBorderWithBg(chartsTitles[i], boxW, widgets.GetBorder(app.Config.BorderStyle, app.Config.BorderType), b, p)
 		renderedCharts = append(renderedCharts, lipgloss.JoinVertical(lipgloss.Left, topBorder, body))
 	}
 
 	var rows []string
 	for i := 0; i < len(renderedCharts); i += chartCols {
-		end := i + chartCols
-		if end > len(renderedCharts) {
-			end = len(renderedCharts)
-		}
+		end := min(i+chartCols, len(renderedCharts))
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, renderedCharts[i:end]...))
 	}
 	topSection := lipgloss.JoinVertical(lipgloss.Left, rows...)
@@ -178,19 +165,14 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	var coreBlocks []string
 	textStyle = lipgloss.NewStyle().Foreground(t)
 
-	for i, usage := range app.CpuPerCore {
-		cW := coreColWidths[i%coreCols] - 4
-		if cW < 10 {
-			cW = 10
-		}
-		barW := cW - 16
-		if barW < 5 {
-			barW = 5
-		}
+	for i, usage := range app.Metrics.CpuPerCore {
+		cW := max(coreColWidths[i%coreCols]-4, 10)
+		barW := max(cW-16, 5)
 
 		bar := widgets.RenderProgressBar(usage, barW, su, w, a)
+		coreLabel := "Core " + util.FastInt(i) + ": " + util.FastPercent1(usage) + " "
 		line := lipgloss.JoinHorizontal(lipgloss.Left,
-			textStyle.Width(16).Render(fmt.Sprintf("Core %-2d: %5.1f%% ", i, usage)),
+			textStyle.Width(16).Render(coreLabel),
 			bar,
 		)
 		coreBlocks = append(coreBlocks, line)
@@ -214,7 +196,7 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 	visibleCoreRows := coreRows
 
 	if totalCoreRows > maxCoreRows {
-		start := max(app.CpuCoreScrollOffset, 0)
+		start := max(app.UI.CpuCoreScrollOffset, 0)
 		end := start + maxCoreRows
 		if end > totalCoreRows {
 			end = totalCoreRows
@@ -227,11 +209,11 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 
 	title := "CPU PER CORE"
 	if totalCoreRows > maxCoreRows {
-		title += fmt.Sprintf(" (PgUp/PgDn %d/%d)", app.CpuCoreScrollOffset+1, totalCoreRows-maxCoreRows+1)
+		title += " (PgUp/PgDn " + util.FastInt(app.UI.CpuCoreScrollOffset+1) + "/" + util.FastInt(totalCoreRows-maxCoreRows+1) + ")"
 	}
 
 	coresBoxWidth := width
-	topBorder := widgets.RenderTopBorderWithBg(title, coresBoxWidth, widgets.GetBorder(app.BorderStyle, app.BorderType), b, p)
+	topBorder := widgets.RenderTopBorderWithBg(title, coresBoxWidth, widgets.GetBorder(app.Config.BorderStyle, app.Config.BorderType), b, p)
 
 	c := container.Width(coresBoxWidth).Height(len(visibleCoreRows)).BorderTop(false)
 	body := c.Render(coresC)

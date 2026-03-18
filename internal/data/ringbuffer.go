@@ -3,15 +3,13 @@ package data
 import "sync"
 
 type RingBuffer struct {
-	mu sync.RWMutex // Protects all fields below
-
-	data   []float64
-	curr   int
-	length int
-	full   bool
-
+	data      []float64
+	mu        sync.RWMutex // Protects all fields below
+	curr      int
+	length    int
 	cachedMax float64
 	cachedSum float64
+	full      bool
 	maxDirty  bool
 	sumDirty  bool
 }

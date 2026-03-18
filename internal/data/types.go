@@ -5,21 +5,20 @@ import (
 )
 
 type ProcessInfo struct {
-	Name        string
-	Pid         int32
-	Cpu         float64
-	Memory      float64
-	Status      string
-	Username    string
-	CreateTime  int64
-	Cmdline     string
-	MemoryBytes uint64
-	Nice        int32 // Priority
-	Ppid        int32 // Parent PID
-
 	NameLower     string
 	UsernameLower string
 	CmdlineLower  string
+	Name          string
+	Status        string
+	Username      string
+	Cmdline       string
+	Pid           int32
+	CreateTime    int64
+	MemoryBytes   uint64
+	Cpu           float64
+	Memory        float64
+	Nice          int32 // Priority
+	Ppid          int32 // Parent PID
 }
 
 type ProcessSnapshot struct {
@@ -42,6 +41,15 @@ type GpuInfo struct {
 	Driver      string
 	MemoryTotal string
 	MemoryUsed  string
+	Slot        string
+	Type        string
+	Vendor      string
+	Temperature string
+	FanSpeed    string
+	PowerUsage  string
+	Utilization string
+	ClockSpeed  string
+	ErrorMsg    string
 }
 
 const (
@@ -52,23 +60,81 @@ const (
 )
 
 type Toast struct {
-	ID        int64
+	StartTime time.Time
 	Message   string
 	Level     string
-	StartTime time.Time
 	Duration  time.Duration
+	ID        int64
 }
 
 type ServiceInfo struct {
+	Description string
 	Name        string
 	Status      string
-	Description string
 }
 
 type ConnectionInfo struct {
 	LocalAddr  string
 	RemoteAddr string
 	State      string
-	Pid        int32
 	Protocol   string
+	Pid        int32
+}
+
+type HardwareCapabilities struct {
+	HasNvidiaGPU         bool
+	HasAmdGPU            bool
+	HasIntelGPU          bool
+	HasBattery           bool
+	HasNetworkInterfaces bool
+	HasDiskIO            bool
+	HasServices          bool
+	HasTempSensors       bool
+	HasDocker            bool
+	HasKubernetes        bool
+}
+
+// ContainerInfo represents container metrics
+type ContainerInfo struct {
+	Name       string
+	ID         string
+	Status     string
+	State      string
+	Image      string
+	Created    string
+	CPUPercent float64
+	MemUsage   uint64
+	MemLimit   uint64
+	MemPct     float64
+	NetRx      uint64
+	NetTx      uint64
+	Type       string // "docker" or "kubernetes"
+}
+
+// K8sPodInfo represents Kubernetes pod metrics
+type K8sPodInfo struct {
+	Name       string
+	Namespace  string
+	Status     string
+	Ready      string
+	Restarts   int
+	CPUReq     string
+	MemReq     string
+	CPULim     string
+	MemLim     string
+	CPUPercent float64
+	MemPct     float64
+	Node       string
+	Age        string
+}
+
+// VmInfo represents VM/hypervisor information
+type VmInfo struct {
+	Hypervisor     string
+	Type           string
+	HostName       string
+	VirtMemory     uint64
+	VirtMemoryUsed uint64
+	VirtCPU        int
+	VirtCPUUsed    int
 }

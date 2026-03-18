@@ -1,87 +1,58 @@
 package data
 
 import (
-	"strings"
+	"charm.land/bubbles/v2/viewport"
 )
 
-// SimpleViewport is a lightweight scrollable text viewer
+// SimpleViewport wraps Bubbles viewport.Model to provide the same API
 type SimpleViewport struct {
-	Width   int
-	Height  int
-	YOffset int
-	Content []string // Split lines
+	viewport viewport.Model
 }
 
 func NewSimpleViewport(width, height int) SimpleViewport {
-	return SimpleViewport{
-		Width:  width,
-		Height: height,
-	}
+	vp := viewport.New(
+		viewport.WithWidth(width),
+		viewport.WithHeight(height),
+	)
+	return SimpleViewport{viewport: vp}
 }
 
 func (v *SimpleViewport) SetContent(s string) {
-	v.Content = strings.Split(s, "\n")
-	v.YOffset = 0
+	v.viewport.SetContent(s)
 }
 
 func (v *SimpleViewport) View() string {
-	if len(v.Content) == 0 {
-		return ""
-	}
-	start := v.YOffset
-	end := start + v.Height
-	if start >= len(v.Content) {
-		start = len(v.Content) - 1
-		if start < 0 {
-			start = 0
-		}
-	}
-	if end > len(v.Content) {
-		end = len(v.Content)
-	}
-	if start > end {
-		start = end
-	}
-
-	visible := v.Content[start:end]
-
-	return strings.Join(visible, "\n")
+	return v.viewport.View()
 }
 
 func (v *SimpleViewport) LineDown(n int) {
-	maxOffset := len(v.Content) - v.Height
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
-	v.YOffset += n
-	if v.YOffset > maxOffset {
-		v.YOffset = maxOffset
-	}
+	v.viewport.ScrollDown(n)
 }
 
 func (v *SimpleViewport) LineUp(n int) {
-	v.YOffset -= n
-	if v.YOffset < 0 {
-		v.YOffset = 0
-	}
+	v.viewport.ScrollUp(n)
 }
 
 func (v *SimpleViewport) GotoTop() {
-	v.YOffset = 0
+	v.viewport.GotoTop()
 }
 
 func (v *SimpleViewport) GotoBottom() {
-	maxOffset := len(v.Content) - v.Height
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
-	v.YOffset = maxOffset
+	v.viewport.GotoBottom()
 }
 
 func (v *SimpleViewport) HalfViewDown() {
-	v.LineDown(v.Height / 2)
+	v.viewport.HalfPageDown()
 }
 
 func (v *SimpleViewport) HalfViewUp() {
-	v.LineUp(v.Height / 2)
+	v.viewport.HalfPageUp()
+}
+
+func (v *SimpleViewport) SetWidth(w int) {
+	v.viewport.SetWidth(w)
+}
+
+func (v *SimpleViewport) SetHeight(h int) {
+	v.viewport.SetHeight(h)
 }

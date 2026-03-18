@@ -15,26 +15,39 @@ import (
 
 // CachedProcessInfo stores the actual process object and its static data
 type CachedProcessInfo struct {
-	Proc          *process.Process // Persistent object for accurate CPU deltas
+	Proc          *process.Process
 	Name          string
 	Username      string
 	Cmdline       string
-	CreateTime    int64
-	Nice          int32
-	Ppid          int32
+	CmdlineLower  string
 	NameLower     string
 	UsernameLower string
+	CreateTime    int64
+	Ppid          int32
+	Nice          int32
 }
 
 var (
-	// processCache stores static info by PID
-	processCache = make(map[int32]*CachedProcessInfo)
-	cacheMutex   sync.RWMutex
-	isFetching   atomic.Bool
+	processCache      = make(map[int32]*CachedProcessInfo)
+	cacheMutex        sync.RWMutex
+	isFetching        atomic.Bool
+	initialPidsLoaded atomic.Bool
 )
 
+// PidsOnlyCmd fetches only PIDs for cache warming (lightweight)
+func PidsOnlyCmd() tea.Cmd {
+	return func() tea.Msg {
+		pids, err := process.Pids()
+		if err != nil {
+			return msg.ProcessCountMsg(0)
+		}
+		initialPidsLoaded.Store(true)
+		return msg.ProcessCountMsg(len(pids))
+	}
+}
+
 // ProcessesCmd fetches running processes and sorts them
-func ProcessesCmd(sortBy string) tea.Cmd {
+func ProcessesCmd(sortBy string, sortDirection string) tea.Cmd {
 	return func() tea.Msg {
 		// Prevent concurrent execution to avoid race conditions on *process.Process
 		// and unbounded goroutine growth.
@@ -74,26 +87,24 @@ func ProcessesCmd(sortBy string) tea.Cmd {
 				}
 
 				name, _ := newProc.Name()
-				username, _ := newProc.Username()
 				createTime, _ := newProc.CreateTime()
-				cmdline, _ := newProc.Cmdline()
 				nice, _ := newProc.Nice()
 				ppid, _ := newProc.Ppid()
 
 				// Intern strings to save memory
 				nameInterned := Intern(name)
-				usernameInterned := Intern(username)
 
 				cached = &CachedProcessInfo{
 					Proc:          newProc,
 					Name:          nameInterned,
-					Username:      usernameInterned,
-					Cmdline:       cmdline, // Don't intern cmdline (unique)
+					Username:      "", // Lazy loaded when needed
+					Cmdline:       "", // Lazy loaded when needed
+					CmdlineLower:  "",
 					CreateTime:    createTime,
 					Nice:          nice,
 					Ppid:          ppid,
 					NameLower:     strings.ToLower(name),
-					UsernameLower: strings.ToLower(username),
+					UsernameLower: "",
 				}
 
 				cacheMutex.Lock()
@@ -134,7 +145,7 @@ func ProcessesCmd(sortBy string) tea.Cmd {
 				Ppid:          cached.Ppid,
 				NameLower:     cached.NameLower,
 				UsernameLower: cached.UsernameLower,
-				CmdlineLower:  strings.ToLower(cached.Cmdline), // Computed here as Cmdline isn't cached efficiently
+				CmdlineLower:  cached.CmdlineLower,
 			})
 		}
 
@@ -148,16 +159,36 @@ func ProcessesCmd(sortBy string) tea.Cmd {
 		cacheMutex.Unlock()
 
 		sort.Slice(procList, func(i, j int) bool {
+			var less bool
 			switch sortBy {
 			case "cpu":
-				return procList[i].Cpu > procList[j].Cpu
-			case "memory":
-				return procList[i].Memory > procList[j].Memory
+				less = procList[i].Cpu > procList[j].Cpu
+			case "memory", "mem":
+				less = procList[i].Memory > procList[j].Memory
 			case "pid":
-				return procList[i].Pid > procList[j].Pid
+				less = procList[i].Pid > procList[j].Pid
+			case "name":
+				// Handle dotted and parenthesized names (put them at the end)
+				nameI := procList[i].NameLower
+				nameJ := procList[j].NameLower
+
+				isSpecialI := strings.HasPrefix(nameI, ".") || strings.HasPrefix(nameI, "(")
+				isSpecialJ := strings.HasPrefix(nameJ, ".") || strings.HasPrefix(nameJ, "(")
+
+				if isSpecialI != isSpecialJ {
+					less = !isSpecialI // Special chars go to the end (so they are "greater")
+				} else {
+					less = nameI < nameJ
+				}
 			default:
 				return false
 			}
+
+			// Invert result if descending
+			if sortDirection == "desc" {
+				return !less
+			}
+			return less
 		})
 
 		return msg.ProcessesMsg(procList)

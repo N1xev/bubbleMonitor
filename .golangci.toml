@@ -1,0 +1,23 @@
+[run]
+  timeout = "5m"
+  modules-download-mode = "readonly"
+
+[linters]
+  default = "none"
+  enable = [
+    "errcheck",
+    "gosimple",
+    "govet",
+    "ineffassign",
+    "staticcheck",
+    "unused"
+  ]
+
+[linters-settings]
+  staticcheck.checks = ["all"]
+  unused.check-runtime = true
+
+[issues]
+  exclude-use-default = false
+  max-issues-per-linter = 0
+  max-same-issues = 0

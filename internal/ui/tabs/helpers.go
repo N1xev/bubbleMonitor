@@ -6,7 +6,7 @@ import (
 
 // CalcNetPercent calculates network usage percentage
 func CalcNetPercent(s *data.AppState) float64 {
-	total := s.NetSentRate + s.NetRecvRate
+	total := s.Metrics.NetSentRate + s.Metrics.NetRecvRate
 	netP := (total / 10) * 100
 	if netP > 100 {
 		netP = 100

@@ -10,12 +10,8 @@ import (
 
 func TestGetProcSliceTypeSafety(t *testing.T) {
 	slice := GetProcSlice()
-	if slice == nil {
-		t.Fatal("GetProcSlice returned nil")
-	}
-
-	if *slice == nil {
-		t.Fatal("GetProcSlice returned nil slice")
+	if slice == nil || *slice == nil {
+		t.Fatal("GetProcSlice returned nil or nil slice")
 	}
 
 	if cap(*slice) < 500 {
@@ -25,7 +21,7 @@ func TestGetProcSliceTypeSafety(t *testing.T) {
 
 func TestInternerBasic(t *testing.T) {
 	interner := &Interner{
-		cache: make(map[string]string),
+		cache: make(map[string]*internerEntry),
 	}
 
 	s1 := "test_process"
@@ -45,7 +41,7 @@ func TestInternerBasic(t *testing.T) {
 
 func TestInternerPruning(t *testing.T) {
 	interner := &Interner{
-		cache: make(map[string]string),
+		cache: make(map[string]*internerEntry),
 	}
 
 	for i := 0; i < maxInternerSize+2000; i++ {
@@ -59,7 +55,7 @@ func TestInternerPruning(t *testing.T) {
 
 func TestInternerConcurrency(t *testing.T) {
 	interner := &Interner{
-		cache: make(map[string]string),
+		cache: make(map[string]*internerEntry),
 	}
 
 	var wg sync.WaitGroup
@@ -98,7 +94,7 @@ func TestSlicePoolReuseability(t *testing.T) {
 
 func BenchmarkIntern(b *testing.B) {
 	interner := &Interner{
-		cache: make(map[string]string),
+		cache: make(map[string]*internerEntry),
 	}
 
 	strings := make([]string, 100)

@@ -1,0 +1,5 @@
+{
+  "name": "bubbleMonitor Landing Page",
+  "description": "A minimal and modern landing page for bubbleMonitor, a terminal-based system monitor built with Go and BubbleTea.",
+  "requestFramePermissions": []
+}

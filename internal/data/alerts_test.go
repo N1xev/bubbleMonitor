@@ -10,14 +10,18 @@ import (
 func TestAlertManagerConcurrentAccess(t *testing.T) {
 	am := NewAlertManager()
 	state := &AppState{
-		Cpu:     75.0,
-		Memory:  80.0,
-		CpuTemp: 65.0,
-		Config: config.AppConfig{
-			Thresholds: map[config.MetricType]float64{
-				config.MetricCPU:  70.0,
-				config.MetricMem:  75.0,
-				config.MetricTemp: 60.0,
+		Metrics: MetricsState{
+			Cpu:     75.0,
+			Memory:  80.0,
+			CpuTemp: 65.0,
+		},
+		Config: ConfigState{
+			Config: config.AppConfig{
+				Thresholds: map[config.MetricType]float64{
+					config.MetricCPU:  70.0,
+					config.MetricMem:  75.0,
+					config.MetricTemp: 60.0,
+				},
 			},
 		},
 	}
@@ -56,10 +60,14 @@ func TestAlertManagerHasAlerts(t *testing.T) {
 	}
 
 	state := &AppState{
-		Cpu: 85.0,
-		Config: config.AppConfig{
-			Thresholds: map[config.MetricType]float64{
-				config.MetricCPU: 70.0,
+		Metrics: MetricsState{
+			Cpu: 85.0,
+		},
+		Config: ConfigState{
+			Config: config.AppConfig{
+				Thresholds: map[config.MetricType]float64{
+					config.MetricCPU: 70.0,
+				},
 			},
 		},
 	}

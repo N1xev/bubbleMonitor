@@ -21,3 +21,33 @@ func FetchOpenFilesCmd(pid int32) tea.Cmd {
 		return msg.OpenFilesMsg{Pid: pid, Files: files}
 	}
 }
+
+// FetchProcessCmdlineCmd lazily fetches cmdline for a process
+func FetchProcessCmdlineCmd(pid int32) tea.Cmd {
+	return func() tea.Msg {
+		proc, err := process.NewProcess(pid)
+		if err != nil {
+			return msg.ProcessCmdlineMsg{Pid: pid, Cmdline: ""}
+		}
+		cmdline, err := proc.Cmdline()
+		if err != nil {
+			return msg.ProcessCmdlineMsg{Pid: pid, Cmdline: ""}
+		}
+		return msg.ProcessCmdlineMsg{Pid: pid, Cmdline: cmdline}
+	}
+}
+
+// FetchProcessUsernameCmd lazily fetches username for a process
+func FetchProcessUsernameCmd(pid int32) tea.Cmd {
+	return func() tea.Msg {
+		proc, err := process.NewProcess(pid)
+		if err != nil {
+			return msg.ProcessUsernameMsg{Pid: pid, Username: ""}
+		}
+		username, err := proc.Username()
+		if err != nil {
+			return msg.ProcessUsernameMsg{Pid: pid, Username: ""}
+		}
+		return msg.ProcessUsernameMsg{Pid: pid, Username: username}
+	}
+}

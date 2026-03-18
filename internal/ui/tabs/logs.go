@@ -8,46 +8,76 @@ import (
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
+	"github.com/N1xev/bubbleMonitor/internal/util"
+)
+
+const (
+	logError = "error"
+	logFail  = "fail"
+	logWarn  = "warn"
 )
 
 func RenderLogs(s *data.AppState, container lipgloss.Style, su, w, a, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
-	boxWidth := s.Width
-	border := widgets.GetBorder(s.BorderStyle, s.BorderType)
+	boxWidth := s.UI.Width
+	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
 	contentWidth := boxWidth - 4
 
-	visibleRows := availHeight - 2
-	if visibleRows < 1 {
-		visibleRows = 1
-	}
+	visibleRows := max(availHeight-3, 1)
 
-	var logLines []string
 	logStyle := lipgloss.NewStyle().Foreground(t)
 
-	// Show last N logs that fit
-	count := len(s.SystemLogs)
-	start := 0
-	if count > visibleRows {
-		start = count - visibleRows
+	count := len(s.Process.SystemLogs)
+	startIdx := s.Process.LogsScrollOffset
+	if startIdx > count {
+		startIdx = 0
+	}
+	endIdx := min(startIdx+visibleRows, count)
+
+	if s.Process.LogsScrollOffset == 0 && count > visibleRows {
+		startIdx = count - visibleRows
+		endIdx = count
 	}
 
-	for i := start; i < count; i++ {
-		line := s.SystemLogs[i]
-		// Basic highlighting
-		if strings.Contains(strings.ToLower(line), "error") || strings.Contains(strings.ToLower(line), "fail") {
-			logLines = append(logLines, lipgloss.NewStyle().Foreground(a).Width(contentWidth).Render(line))
-		} else if strings.Contains(strings.ToLower(line), "warn") {
-			logLines = append(logLines, lipgloss.NewStyle().Foreground(w).Width(contentWidth).Render(line))
+	errorStyle := lipgloss.NewStyle().Foreground(a)
+	warnStyle := lipgloss.NewStyle().Foreground(w)
+	defaultStyle := logStyle
+
+	sb := &s.UI.ContentBuilder
+	sb.Reset()
+	sb.Grow(visibleRows * (contentWidth + 1))
+
+	for i := startIdx; i < endIdx; i++ {
+		line := s.Process.SystemLogs[i]
+		if len(line) > contentWidth {
+			line = line[:contentWidth]
+		}
+		formattedLine := util.PadRight(line, contentWidth)
+
+		lowerLine := strings.ToLower(line)
+		if strings.Contains(lowerLine, logError) || strings.Contains(lowerLine, logFail) {
+			sb.WriteString(errorStyle.Render(formattedLine))
+		} else if strings.Contains(lowerLine, logWarn) {
+			sb.WriteString(warnStyle.Render(formattedLine))
 		} else {
-			logLines = append(logLines, logStyle.Width(contentWidth).Render(line))
+			sb.WriteString(defaultStyle.Render(formattedLine))
+		}
+		if i < endIdx-1 {
+			sb.WriteString("\n")
 		}
 	}
 
-	content := strings.Join(logLines, "\n")
+	content := sb.String()
 
 	c := container.Width(boxWidth).Height(visibleRows).BorderTop(false)
 	body := c.Render(content)
-	topBorder := widgets.RenderTopBorderWithBg("SYSTEM LOGS (Last 50)", boxWidth, border, b, p)
+
+	startLine := startIdx + 1
+	if startLine > count {
+		startLine = 1
+	}
+	title := "SYSTEM LOGS [" + util.FastInt(startLine) + "-" + util.FastInt(endIdx) + " of " + util.FastInt(count) + "]"
+	topBorder := widgets.RenderTopBorderWithBg(title, boxWidth, border, b, p)
 
 	return lipgloss.JoinVertical(lipgloss.Left, topBorder, body)
 }

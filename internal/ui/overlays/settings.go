@@ -2,6 +2,7 @@ package overlays
 
 import (
 	"fmt"
+	"slices"
 
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
@@ -13,13 +14,10 @@ import (
 
 // RenderSettingsOverlay renders the settings configuration modal
 func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg compat.AdaptiveColor) string {
-	boxWidth := 90
-	if boxWidth > width-4 {
-		boxWidth = width - 4
-	}
+	boxWidth := min(data.SettingsDefaultWidth, width-4)
 
-	boxHeight := 22
-	border := widgets.GetBorder(s.BorderStyle, s.BorderType)
+	boxHeight := min(data.SettingsDefaultHeight, height-4)
+	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
 	itemStyle := lipgloss.NewStyle().Foreground(t)
 	selectedStyle := lipgloss.NewStyle().Foreground(p).Bold(true).Border(border, false, false, false, true).BorderForeground(p).PaddingLeft(1)
@@ -40,22 +38,20 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	}
 
 	for _, item := range thresholdItems {
-		val := fmt.Sprintf("%.0f%%", s.Config.Thresholds[item.metric])
+		val := fmt.Sprintf("%.0f%%", s.Config.Config.Thresholds[item.metric])
 		if item.metric == config.MetricTemp {
-			val = fmt.Sprintf("%.0f°C", s.Config.Thresholds[item.metric])
+			val = fmt.Sprintf("%.0f°C", s.Config.Config.Thresholds[item.metric])
 		}
 		line := fmt.Sprintf("%-15s %s", item.label, val)
-		if s.SettingsIdx == item.idx {
+		if s.UI.SettingsIdx == item.idx {
 			col1 = append(col1, selectedStyle.Render(line))
 		} else {
 			col1 = append(col1, itemStyle.Render("  "+line))
 		}
 	}
 
-	col1 = append(col1, "")
-
 	viewName := "normal"
-	if s.TreeView {
+	if s.Process.TreeView {
 		viewName = "tree"
 	}
 
@@ -64,11 +60,12 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		value string
 		idx   int
 	}{
-		{"Chart Type:", s.ChartType, 4},
+		{"Chart Type:", s.UI.ChartType, 4},
 		{"View Type:", viewName, 5},
-		{"Sort By:", s.SortBy, 6},
-		{"History Length:", fmt.Sprintf("%ds", s.HistoryLength), 7},
+		{"Sort By:", s.Process.SortBy, 6},
+		{"History Length:", fmt.Sprintf("%ds", s.UI.HistoryLength), 7},
 		{"Process CPU:", "Raw", 8},
+		{"Sort Direction:", s.Process.SortDirection, 9},
 	}
 	if s.Config.ProcessCpuNormalized {
 		displayItems[4].value = "Normalized"
@@ -76,7 +73,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 
 	for _, item := range displayItems {
 		line := fmt.Sprintf("%-15s %s", item.label, item.value)
-		if s.SettingsIdx == item.idx {
+		if s.UI.SettingsIdx == item.idx {
 			col1 = append(col1, selectedStyle.Render(line))
 		} else {
 			col1 = append(col1, itemStyle.Render("  "+line))
@@ -84,20 +81,14 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	}
 
 	var col2 []string
-	col2 = append(col2, headerStyle.Render("TABS & APPEARANCE"))
+	col2 = append(col2, headerStyle.Render("TABS"))
 
-	allTabs := []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System"}
-	currentTabIdxBase := 9
+	allTabs := []string{"Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"}
+	currentTabIdxBase := 10
 
 	for i, tabName := range allTabs {
 		idx := currentTabIdxBase + i
-		isEnabled := false
-		for _, tab := range s.ActiveTabs {
-			if tab == tabName {
-				isEnabled = true
-				break
-			}
-		}
+		isEnabled := slices.Contains(s.UI.ActiveTabs, tabName)
 
 		status := "[ ]"
 		if isEnabled {
@@ -105,19 +96,20 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		}
 
 		line := fmt.Sprintf("%-15s %s", tabName, status)
-		if s.SettingsIdx == idx {
+		if s.UI.SettingsIdx == idx {
 			col2 = append(col2, selectedStyle.Render(line))
 		} else {
 			col2 = append(col2, itemStyle.Render("  "+line))
 		}
 	}
 
-	col2 = append(col2, "")
+	var col3 []string
+	col3 = append(col3, headerStyle.Render("APPEARANCE"))
 
 	appearanceIdxBase := currentTabIdxBase + len(allTabs)
 
 	bgLabel := "transparent"
-	if s.BackgroundOpaque {
+	if s.Config.BackgroundOpaque {
 		bgLabel = "opaque"
 	}
 
@@ -126,28 +118,32 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		value string
 		idx   int
 	}{
-		{"Theme:", s.Theme, appearanceIdxBase},
-		{"Refresh Rate:", fmt.Sprintf("%dms", s.RefreshRate), appearanceIdxBase + 1},
-		{"Border Type:", s.BorderType, appearanceIdxBase + 2},
-		{"Border Style:", s.BorderStyle, appearanceIdxBase + 3},
+		{"Theme:", s.Config.Theme, appearanceIdxBase},
+		{"Refresh Rate:", fmt.Sprintf("%dms", s.Config.RefreshRate), appearanceIdxBase + 1},
+		{"Border Type:", s.Config.BorderType, appearanceIdxBase + 2},
+		{"Border Style:", s.Config.BorderStyle, appearanceIdxBase + 3},
 		{"Background:", bgLabel, appearanceIdxBase + 4},
 	}
 
 	for _, item := range appItems {
 		line := fmt.Sprintf("%-15s %s", item.label, item.value)
-		if s.SettingsIdx == item.idx {
-			col2 = append(col2, selectedStyle.Render(line))
+		if s.UI.SettingsIdx == item.idx {
+			col3 = append(col3, selectedStyle.Render(line))
 		} else {
-			col2 = append(col2, itemStyle.Render("  "+line))
+			col3 = append(col3, itemStyle.Render("  "+line))
 		}
 	}
 
+	contentWidth := boxWidth - 6
+	colWidth := contentWidth / 3
 	col1Content := lipgloss.JoinVertical(lipgloss.Left, col1...)
 	col2Content := lipgloss.JoinVertical(lipgloss.Left, col2...)
+	col3Content := lipgloss.JoinVertical(lipgloss.Left, col3...)
 
 	contentBlock := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.NewStyle().Width(boxWidth/2).Render(col1Content),
-		lipgloss.NewStyle().Width(boxWidth/2).Render(col2Content),
+		lipgloss.NewStyle().Width(colWidth).Render(col1Content),
+		lipgloss.NewStyle().Width(colWidth).Render(col2Content),
+		lipgloss.NewStyle().Width(colWidth).Render(col3Content),
 	)
 
 	hint := lipgloss.NewStyle().Foreground(mu).Align(lipgloss.Center).Width(boxWidth - 6).MarginTop(1).Render("↑/↓ select • ←/→ change/toggle • . to close")

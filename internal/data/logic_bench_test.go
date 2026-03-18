@@ -6,7 +6,9 @@ import (
 
 func BenchmarkBuildProcessTree(b *testing.B) {
 	state := &AppState{
-		CollapsedPids: make(map[int32]bool),
+		Process: ProcessState{
+			CollapsedPids: make(map[int32]bool),
+		},
 	}
 
 	procs := make([]ProcessInfo, 500)
@@ -28,12 +30,14 @@ func BenchmarkBuildProcessTree(b *testing.B) {
 
 func BenchmarkGetFilteredProcesses(b *testing.B) {
 	state := &AppState{
-		ProcessFilter: "test",
+		Process: ProcessState{
+			ProcessFilter: "test",
+		},
 	}
 
-	state.Processes = make([]ProcessInfo, 500)
+	state.Process.Processes = make([]ProcessInfo, 500)
 	for i := 0; i < 500; i++ {
-		state.Processes[i] = ProcessInfo{
+		state.Process.Processes[i] = ProcessInfo{
 			Pid:           int32(i + 1),
 			Name:          "Test_Process",
 			Username:      "User_Name",

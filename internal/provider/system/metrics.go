@@ -2,6 +2,7 @@ package system
 
 import (
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -14,6 +15,8 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/msg"
 )
 
+var cpuInitialized atomic.Bool
+
 func TickCmd(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(t time.Time) tea.Msg {
 		return msg.TickMsg(t)
@@ -25,12 +28,17 @@ func FastMetricsCmd() tea.Cmd {
 		var firstErr error
 
 		cpuPercent, err := cpu.Percent(0, false)
-		if err != nil && firstErr == nil {
+		if err != nil {
 			firstErr = err
 		}
 		cpuVal := 0.0
 		if len(cpuPercent) > 0 {
 			cpuVal = cpuPercent[0]
+		}
+
+		if !cpuInitialized.Load() && cpuVal > 0 {
+			cpuInitialized.Store(true)
+			cpuVal = 0
 		}
 
 		cpuPerCore, err := cpu.Percent(0, true)
@@ -77,13 +85,12 @@ func FastMetricsCmd() tea.Cmd {
 func SlowMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
 		var firstErr error
-
 		root := "/"
 		if runtime.GOOS == "windows" {
 			root = "C:"
 		}
 		diskInfo, err := disk.Usage(root)
-		if err != nil && firstErr == nil {
+		if err != nil {
 			firstErr = err
 		}
 

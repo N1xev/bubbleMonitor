@@ -18,21 +18,23 @@ const (
 
 type AppConfig struct {
 	Thresholds           map[MetricType]float64 `json:"thresholds"`
-	HistoryLength        int                    `json:"history_length"`
+	CustomTheme          *CustomThemeConfig     `json:"custom_theme,omitempty"`
+	RemoteHosts          []RemoteHostConfig     `json:"remote_hosts"`
+	Tabs                 []string               `json:"tabs,omitempty"`
 	ChartType            string                 `json:"chart_type"`
-	ViewType             string                 `json:"view_type"`         // "normal" or "tree"
-	SortBy               string                 `json:"sort_by"`           // "cpu", "mem", "pid"
-	Theme                string                 `json:"theme"`             // dark, light, nord, dracula, custom, etc
+	ViewType             string                 `json:"view_type"`      // "normal" or "tree"
+	SortBy               string                 `json:"sort_by"`        // "cpu", "mem", "pid", "name"`
+	Theme                string                 `json:"theme"`          // dark, light, nord, dracula, custom, etc
+	BorderType           string                 `json:"border_type"`    // normal, rounded
+	BorderStyle          string                 `json:"border_style"`   // single, double, dashed
+	SortDirection        string                 `json:"sort_direction"` // "asc" or "desc"
+	DefaultTab           string                 `json:"default_tab,omitempty"`
+	Logging              LoggingConfig          `json:"logging"`
+	HealthWeights        HealthWeights          `json:"health_weights"`
+	HistoryLength        int                    `json:"history_length"`
 	RefreshRate          int                    `json:"refresh_rate"`      // milliseconds: 500, 1000, 2000, 5000
-	BorderType           string                 `json:"border_type"`       // normal, rounded
-	BorderStyle          string                 `json:"border_style"`      // single, double, dashed
 	BackgroundOpaque     bool                   `json:"background_opaque"` // true = opaque, false = transparent
 	ProcessCpuNormalized bool                   `json:"process_cpu_normalized"`
-	Tabs                 []string               `json:"tabs,omitempty"`
-	Logging              LoggingConfig          `json:"logging"`
-	RemoteHosts          []RemoteHostConfig     `json:"remote_hosts"`
-	HealthWeights        HealthWeights          `json:"health_weights"`
-	CustomTheme          *CustomThemeConfig     `json:"custom_theme,omitempty"`
 }
 
 type HealthWeights struct {
@@ -46,13 +48,16 @@ type HealthWeights struct {
 }
 
 type RemoteHostConfig struct {
-	Name string `json:"name"`
-	Host string `json:"host"` // user@hostname:port
+	Name    string `json:"name"`
+	Host    string `json:"host"`               // user@hostname or hostname
+	KeyPath string `json:"key_path,omitempty"` // path to SSH private key
+	Port    int    `json:"port,omitempty"`     // SSH port (default 22)
+	Timeout int    `json:"timeout,omitempty"`  // connection timeout in seconds
 }
 
 type LoggingConfig struct {
-	Enabled bool   `json:"enabled"`
 	Path    string `json:"path"`
+	Enabled bool   `json:"enabled"`
 }
 
 type CustomThemeConfig struct {
@@ -79,7 +84,8 @@ func DefaultConfig() AppConfig {
 		BorderStyle:          "dashed",
 		BackgroundOpaque:     true,
 		ProcessCpuNormalized: true,
-		Tabs:                 []string{"Overview", "Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"},
+		SortDirection:        "asc",
+		Tabs:                 []string{"Processes", "Metrics", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"},
 		Thresholds: map[MetricType]float64{
 			MetricCPU:  90.0,
 			MetricMem:  90.0,
@@ -123,7 +129,9 @@ func LoadConfig() (AppConfig, error) {
 		}
 		return DefaultConfig(), err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	var config AppConfig
 	decoder := json.NewDecoder(file)
@@ -165,6 +173,9 @@ func LoadConfig() (AppConfig, error) {
 	if config.BorderStyle == "" {
 		config.BorderStyle = defaults.BorderStyle
 	}
+	if config.SortDirection == "" {
+		config.SortDirection = defaults.SortDirection
+	}
 
 	// Ensure defaults for HealthWeights if missing (zero value check)
 	if config.HealthWeights.CpuCritical == 0 {
@@ -184,7 +195,9 @@ func SaveConfig(config AppConfig) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")

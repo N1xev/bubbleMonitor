@@ -20,4 +20,23 @@ const (
 
 	// Process Tracking
 	TopProcessesTrackCount = 5
+
+	// Kill Dialog
+	KillDialogDefaultWidth     = 50
+	KillDialogButtonTotalWidth = 16
+	KillDialogButtonYOffset    = 4
+
+	// Settings Overlay
+	SettingsDefaultWidth  = 100
+	SettingsDefaultHeight = 22
+
+	// Context Menu
+	ContextMenuDefaultWidth = 30
+
+	// Open Files Overlay
+	OpenFilesDefaultWidth  = 80
+	OpenFilesDefaultHeight = 20
+
+	SamLabDefaultWidth  = 50
+	SamLabDefaultHeight = 14
 )

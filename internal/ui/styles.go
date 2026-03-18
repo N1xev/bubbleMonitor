@@ -8,7 +8,6 @@ import (
 
 // ThemePalette holds colors for the application
 type ThemePalette struct {
-	Name       string
 	Primary    compat.AdaptiveColor
 	Secondary  compat.AdaptiveColor
 	Success    compat.AdaptiveColor
@@ -18,6 +17,7 @@ type ThemePalette struct {
 	Muted      compat.AdaptiveColor
 	Border     compat.AdaptiveColor
 	Background compat.AdaptiveColor
+	Name       string
 }
 
 // makeColor creates an AdaptiveColor with same value for Light/Dark

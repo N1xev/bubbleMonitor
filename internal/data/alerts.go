@@ -9,11 +9,11 @@ import (
 )
 
 type Alert struct {
+	Timestamp time.Time
+	Message   string
 	Type      config.MetricType
 	Value     float64
 	Threshold float64
-	Message   string
-	Timestamp time.Time
 }
 
 type AlertManager struct {
@@ -31,36 +31,36 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	cpuThreshold := s.Config.Thresholds[config.MetricCPU]
-	if cpuThreshold > 0 && s.Cpu > cpuThreshold {
+	cpuThreshold := s.Config.Config.Thresholds[config.MetricCPU]
+	if cpuThreshold > 0 && s.Metrics.Cpu > cpuThreshold {
 		am.ActiveAlerts[config.MetricCPU] = Alert{
 			Type:      config.MetricCPU,
-			Value:     s.Cpu,
+			Value:     s.Metrics.Cpu,
 			Threshold: cpuThreshold,
-			Message:   fmt.Sprintf("CPU Usage High: %.1f%% (>%.0f%%)", s.Cpu, cpuThreshold),
+			Message:   fmt.Sprintf("CPU Usage High: %.1f%% > (%.0f%%)", s.Metrics.Cpu, cpuThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {
 		delete(am.ActiveAlerts, config.MetricCPU)
 	}
 
-	memThreshold := s.Config.Thresholds[config.MetricMem]
-	if memThreshold > 0 && s.Memory > memThreshold {
+	memThreshold := s.Config.Config.Thresholds[config.MetricMem]
+	if memThreshold > 0 && s.Metrics.Memory > memThreshold {
 		am.ActiveAlerts[config.MetricMem] = Alert{
 			Type:      config.MetricMem,
-			Value:     s.Memory,
+			Value:     s.Metrics.Memory,
 			Threshold: memThreshold,
-			Message:   fmt.Sprintf("Memory Usage High: %.1f%% (>%.0f%%)", s.Memory, memThreshold),
+			Message:   fmt.Sprintf("Memory Usage High: %.1f%% > (%.0f%%)", s.Metrics.Memory, memThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {
 		delete(am.ActiveAlerts, config.MetricMem)
 	}
 
-	diskThreshold := s.Config.Thresholds[config.MetricDisk]
+	diskThreshold := s.Config.Config.Thresholds[config.MetricDisk]
 	if diskThreshold > 0 {
 		var totalUsed, totalAll uint64
-		for _, part := range s.DiskPartitions {
+		for _, part := range s.Metrics.DiskPartitions {
 			totalUsed += part.Used
 			totalAll += part.Total
 		}
@@ -73,7 +73,7 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 					Type:      config.MetricDisk,
 					Value:     overallPct,
 					Threshold: diskThreshold,
-					Message:   fmt.Sprintf("Overall Disk High: %.1f%% (>%.0f%%)", overallPct, diskThreshold),
+					Message:   fmt.Sprintf("Overall Disk High: %.1f%% > (%.0f%%)", overallPct, diskThreshold),
 					Timestamp: time.Now(),
 				}
 			} else {
@@ -82,13 +82,13 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 		}
 	}
 
-	tempThreshold := s.Config.Thresholds[config.MetricTemp]
-	if tempThreshold > 0 && s.CpuTemp > tempThreshold {
+	tempThreshold := s.Config.Config.Thresholds[config.MetricTemp]
+	if tempThreshold > 0 && s.Metrics.CpuTemp > tempThreshold {
 		am.ActiveAlerts[config.MetricTemp] = Alert{
 			Type:      config.MetricTemp,
-			Value:     s.CpuTemp,
+			Value:     s.Metrics.CpuTemp,
 			Threshold: tempThreshold,
-			Message:   fmt.Sprintf("CPU Temp High: %.1f°C (>%.0f°C)", s.CpuTemp, tempThreshold),
+			Message:   fmt.Sprintf("CPU Temp High: %.1f°C > (%.0f°C)", s.Metrics.CpuTemp, tempThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {

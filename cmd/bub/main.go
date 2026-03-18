@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
+	// "log"
+	// "net/http"
 	_ "net/http/pprof"
 	"os"
 
@@ -12,10 +12,10 @@ import (
 )
 
 func main() {
-	go func() {
-		log.Println("pprof listening on http://localhost:8080")
-		log.Println(http.ListenAndServe("localhost:8080", nil))
-	}()
+	// go func() {
+	// 	log.Println("pprof listening on http://localhost:8080")
+	// 	log.Println(http.ListenAndServe("localhost:8080", nil))
+	// }()
 
 	p := tea.NewProgram(app.InitialModel())
 	if _, err := p.Run(); err != nil {
