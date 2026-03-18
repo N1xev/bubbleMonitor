@@ -1483,53 +1483,6 @@ func TestRenderCache(t *testing.T) {
 	}
 }
 
-func TestConcurrentMessageHandling(t *testing.T) {
-	m := createTestModel()
-	m.Process.Processes = []data.ProcessInfo{
-		{Pid: 1, Name: "proc1", NameLower: "proc1"},
-		{Pid: 2, Name: "proc2", NameLower: "proc2"},
-		{Pid: 3, Name: "proc3", NameLower: "proc3"},
-	}
-	m.UI.Width = 80
-	m.UI.Height = 24
-	m.UI.SelectedTab = 1
-	m.UI.ActiveTabs = []string{"Overview", "Processes"}
-
-	done := make(chan bool, 10)
-
-	go func() {
-		for i := 0; i < 100; i++ {
-			m.Update(messages.TickMsg(time.Now()))
-		}
-		done <- true
-	}()
-
-	go func() {
-		for i := 0; i < 100; i++ {
-			m.Update(messages.CpuMemMsg{
-				Cpu:    float64(i),
-				Memory: float64(i),
-			})
-		}
-		done <- true
-	}()
-
-	go func() {
-		for i := 0; i < 100; i++ {
-			m.Update(tea.KeyPressMsg{Code: 'j'})
-		}
-		done <- true
-	}()
-
-	for i := 0; i < 3; i++ {
-		<-done
-	}
-
-	if m.UI.TickCount == 0 {
-		t.Error("expected TickCount to be updated")
-	}
-}
-
 // Integration runs all integration tests for the Update function
 // This is the master test function that can be run with: go test -v ./internal/app/... -run Integration
 func TestIntegration(t *testing.T) {
@@ -1558,7 +1511,9 @@ func TestIntegration(t *testing.T) {
 	t.Run("RenderCache", func(t *testing.T) {
 		TestRenderCache(t)
 	})
-	t.Run("ConcurrentMessageHandling", func(t *testing.T) {
-		TestConcurrentMessageHandling(t)
-	})
+	// Concurrent message handling test removed - Update() is not
+	// thread-safe by design (called sequentially from TUI loop)
+	// t.Run("ConcurrentMessageHandling", func(t *testing.T) {
+	// 	TestConcurrentMessageHandling(t)
+	// })
 }
