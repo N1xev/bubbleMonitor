@@ -33,28 +33,26 @@ A beautiful terminal-based system monitor built with Go and BubbleTea. Track you
 go install github.com/N1xev/bubbleMonitor/cmd/bub@latest
 ```
 
-### Binary
+Works in all platfroms XD
 
-Download from [Releases](https://github.com/N1xev/bubbleMonitor/releases).
+### Linux
 
 ```bash
-# Linux
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_linux_x86_64 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_linux_amd64 -o bub
 chmod +x bub
-sudo mv bub /usr/bin/
+sudo mv bub /usr/local/bin/
+```
 
-# macOS (Intel)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_macos_x86_64 -o bub
-chmod +x bub
-sudo mv bub /usr/bin/
+### macOS / Windows
 
-# macOS (Apple Silicon)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_macos_aarch64 -o bub
-chmod +x bub
-sudo mv bub /usr/bin/
+Not available yet. Use [`go install`](#go) or [Build from Source](#build-from-source).
 
-# Windows
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_windows_x86_64.exe -o bub.exe
+## Build from Source
+
+```bash
+git clone https://github.com/N1xev/bubbleMonitor.git
+cd bubbleMonitor
+go install ./cmd/bub
 ```
 
 ## Keys

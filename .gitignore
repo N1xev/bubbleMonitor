@@ -1,4 +1,5 @@
 build/
+dist/
 bub.exe
 bub-v0.1.0-all-platforms.zip
 bub.tape
