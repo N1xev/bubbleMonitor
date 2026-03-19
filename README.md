@@ -8,56 +8,67 @@ A beautiful terminal-based system monitor built with Go and BubbleTea. Track you
 
 **"shows you only what you want to see! 😄"**
 
-![bubbleMonitor Screenshot](https://github.com/user-attachments/assets/8929a57d-5160-4ef8-9169-69e1e42af11f)
+![bubbleMonitor Screenshot](./preview.png)
 
-## What's Inside
+## Features
 
-Monitor everything that matters: CPU usage (per-core!), memory consumption, disk space, network activity, battery status, and system temperatures. Manage processes with ease—filter, sort, kill, suspend, or check what files they're using.
+- CPU (per-core and total)
+- Memory, swap
+- Disk usage, I/O rates
+- Network throughput
+- Processes: kill, suspend, resume, tree view, filter, bookmarks
+- GPU: NVIDIA, AMD
+- Temperatures, battery
+- Docker, Kubernetes containers
+- VM detection
+- Health score (0-100%)
+- Alerts when thresholds exceeded
+- SSH remote monitoring
 
-Choose from 30+ gorgeous themes (Dracula, Nord, Gruvbox, Tokyo Night, and more), customize borders, and pick your favorite chart style. Works beautifully on Windows, Linux, and macOS.
+## Install
 
-## Getting Started
-
-Grab the latest binary for your system:
+### Go
 
 ```bash
-# Windows
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-windows-amd64-v0.1.4.exe -o bub.exe
+go install github.com/N1xev/bubbleMonitor/cmd/bub@latest
+```
 
+### Binary
+
+Download from [Releases](https://github.com/N1xev/bubbleMonitor/releases).
+
+```bash
 # Linux
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-linux-amd64-v0.1.4 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_linux_x86_64 -o bub
 chmod +x bub
+sudo mv bub /usr/bin/
 
 # macOS (Intel)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-darwin-amd64-v0.1.4 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_macos_x86_64 -o bub
 chmod +x bub
+sudo mv bub /usr/bin/
 
 # macOS (Apple Silicon)
-curl -L https://github.com/N1xev/bubbleMonitor/releases/download/v0.1.4/bub-darwin-arm64-v0.1.4 -o bub
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_macos_aarch64 -o bub
 chmod +x bub
+sudo mv bub /usr/bin/
+
+# Windows
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_windows_x86_64.exe -o bub.exe
 ```
 
-Or build from source if you're feeling adventurous:
+## Keys
 
-```bash
-git clone https://github.com/N1xev/bubbleMonitor.git
-cd bubbleMonitor
-go build -o bub ./cmd/bub
-```
-
-Then just run `./bub` and you're good to go!
-
-## Keyboard Shortcuts
-
-- `Tab` / `1-6` - Navigate between tabs
-- `P` - Pause/resume monitoring
-- `S` - Sort processes
-- `f` - Filter processes
-- `K` - Kill selected process
-- `z` / `x` - Suspend/resume process
-- `.` - Open settings
-- `?` - Show all shortcuts
-- `Q` - Quit
+`1-9` - Switch tabs
+`tab` - Next tab
+`↑↓` - Move
+`q` - Quit
+`?` - Help
+`.` - Settings
+`K` - Kill process
+`f` - Filter
+`s` - Sort
+`T` - Tree view
 
 ## Configuration
 
@@ -112,4 +123,3 @@ GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 ---
 
 **Made with ❤️ by [Alaa Elsamouly](https://github.com/N1xev)**
-

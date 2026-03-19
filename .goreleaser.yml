@@ -8,13 +8,25 @@ before:
     - go generate ./...
 
 builds:
+  - id: bubbleMonitor-windows
+    main: ./cmd/bub
+    binary: bub.exe
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
   - id: bubbleMonitor
     main: ./cmd/bub
     binary: bub
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
@@ -28,8 +40,14 @@ builds:
       - -X main.date={{.Date}}
 
 archives:
-  - id: default
+  - id: binaries
+    format: binary
+    builds:
+      - bubbleMonitor-windows
+      - bubbleMonitor
+  - id: archives
     format: tar.gz
+    wrap_in_directory: true
     format_overrides:
       - goos: windows
         format: zip
@@ -39,6 +57,7 @@ archives:
       darwin: macOS
       linux: Linux
       windows: Windows
+    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
 
 checksum:
   name_template: 'checksums.txt'
