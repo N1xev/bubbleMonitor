@@ -1,7 +1,6 @@
-project_name: bubbleMonitor
+version: 2
 
-binary_names:
-  - bub
+project_name: bubbleMonitor
 
 before:
   hooks:
@@ -51,12 +50,6 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
-    replacements:
-      amd64: x86_64
-      arm64: aarch64
-      darwin: macOS
-      linux: Linux
-      windows: Windows
     name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}'
 
 checksum:
@@ -69,6 +62,12 @@ release:
   draft: false
   prerelease: auto
   name_template: '{{.Tag}}'
+  replacements:
+    amd64: x86_64
+    arm64: aarch64
+    darwin: macOS
+    linux: Linux
+    windows: Windows
 
 changelog:
   sort: asc
