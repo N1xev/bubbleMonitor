@@ -1,5 +1,26 @@
 package data
 
+// Layout: reserved rows for header, footer, borders, and chrome.
+// Used to calculate available content rows: UI.Height - ReservedContentRows.
+const ReservedContentRows = 19
+
+// Settings overlay index boundaries.
+// Thresholds (0..ThresholdCount-1), Display (ThresholdCount..+DisplayCount),
+// Tabs (+TabCount), Appearance (+AppearanceCount).
+const (
+	ThresholdCount     = 4 // CPU, Memory, Disk, Temp
+	DisplayCount       = 6 // ChartType, ViewType, SortBy, HistoryLen, ProcessCPU, SortDir
+	TabCount           = 9 // all available tabs
+	AppearanceCount    = 5 // Theme, RefreshRate, BorderType, BorderStyle, Background
+	TotalSettingsCount = ThresholdCount + DisplayCount + TabCount + AppearanceCount
+)
+
+// AllAvailableTabs is the canonical list of every tab the settings UI can toggle/reorder.
+var AllAvailableTabs = []string{
+	"Metrics", "Processes", "Disks", "Network",
+	"System", "Services", "Connections", "Logs", "Remote",
+}
+
 // Health Scoring Constants
 const (
 	MaxHealthScore = 100
@@ -27,7 +48,7 @@ const (
 	KillDialogButtonYOffset    = 4
 
 	// Settings Overlay
-	SettingsDefaultWidth  = 100
+	SettingsDefaultWidth  = 120
 	SettingsDefaultHeight = 22
 
 	// Context Menu
