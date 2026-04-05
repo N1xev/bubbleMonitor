@@ -152,3 +152,24 @@ func FastGb(value uint64) string {
 	mb := float64(value) / 1024 / 1024
 	return formatFloat1(mb) + " MB"
 }
+
+func FastBytes(value uint64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+		TB = GB * 1024
+	)
+	switch {
+	case value >= TB:
+		return formatFloat1(float64(value)/float64(TB)) + " TB"
+	case value >= GB:
+		return formatFloat1(float64(value)/float64(GB)) + " GB"
+	case value >= MB:
+		return formatFloat1(float64(value)/float64(MB)) + " MB"
+	case value >= KB:
+		return formatFloat1(float64(value)/float64(KB)) + " KB"
+	default:
+		return FastUint64(value) + " B"
+	}
+}
