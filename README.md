@@ -33,19 +33,30 @@ A beautiful terminal-based system monitor built with Go and BubbleTea. Track you
 go install github.com/N1xev/bubbleMonitor/cmd/bub@latest
 ```
 
-Works in all platfroms XD
-
 ### Linux
 
 ```bash
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_linux_amd64 -o bub
-chmod +x bub
-sudo mv bub /usr/local/bin/
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_linux_amd64.tar.gz -o bub.tar.gz
+tar -xzf bub.tar.gz
+sudo mv bubbleMonitor_linux_amd64_v1/bub /usr/local/bin/
+rm bub.tar.gz
 ```
 
-### macOS / Windows
+### macOS
 
-Not available yet. Use [`go install`](#go) or [Build from Source](#build-from-source).
+```bash
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_darwin_amd64.tar.gz -o bub.tar.gz
+tar -xzf bub.tar.gz
+sudo mv bubbleMonitor_darwin_amd64_v1/bub /usr/local/bin/
+rm bub.tar.gz
+```
+
+### Windows
+
+```powershell
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_windows_amd64.zip -o bub.zip
+Expand-Archive bub.zip
+```
 
 ## Build from Source
 
@@ -91,11 +102,9 @@ Want your own colors? Switch to the `custom` theme and define your palette:
 
 Most features work everywhere, but there are a few quirks:
 
-- **Windows**: Temperature monitoring might need admin privileges. Load averages aren't available.
-- **Linux**: Full support for everything, including load averages.
-- **macOS**: Load averages show as "N/A", and GPU monitoring is limited.
-
-GPU monitoring works best with NVIDIA cards across all platforms.
+- **Linux**: Full support for everything, including GPU monitoring via NVML (NVIDIA) and AMD SMI.
+- **macOS**: GPU info via `system_profiler`. Load averages show as "N/A".
+- **Windows**: GPU name via `wmic`. Temperature monitoring might need admin privileges. Load averages aren't available.
 
 ## Contributing
 
