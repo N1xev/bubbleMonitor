@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"sync/atomic"
 
-	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/net"
@@ -59,28 +58,6 @@ func getCapabilities() *data.HardwareCapabilities {
 		HasTempSensors:       tempDetected.Load(),
 		HasDocker:            dockerDetected.Load(),
 		HasKubernetes:        k8sDetected.Load(),
-	}
-}
-
-func detectNvidia() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("NVIDIA detection panicked: %v", r)
-		}
-	}()
-
-	ensureNVML()
-	if nvmlInitialized {
-		count, ret := nvml.DeviceGetCount()
-		if ret == nvml.SUCCESS && count > 0 {
-			nvidiaDetected.Store(true)
-			return
-		}
-	}
-
-	cmd := exec.Command("nvidia-smi", "--query-gpu=index", "--format=csv,noheader")
-	if out, err := cmd.Output(); err == nil && len(out) > 0 {
-		nvidiaDetected.Store(true)
 	}
 }
 
