@@ -74,18 +74,19 @@ type CustomThemeConfig struct {
 
 func DefaultConfig() AppConfig {
 	return AppConfig{
-		HistoryLength:        60,
+		HistoryLength:        900,
 		ChartType:            "braille",
 		ViewType:             "normal",
 		SortBy:               "cpu",
-		Theme:                "dark",
+		Theme:                "horizon",
 		RefreshRate:          1000,
 		BorderType:           "rounded",
-		BorderStyle:          "dashed",
+		BorderStyle:          "single",
 		BackgroundOpaque:     true,
 		ProcessCpuNormalized: true,
 		SortDirection:        "asc",
-		Tabs:                 []string{"Processes", "Metrics", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"},
+		Tabs:                 []string{"Processes", "Metrics", "System", "Disks", "Network", "Services", "Connections", "Logs", "Remote"},
+		DefaultTab:           "Processes",
 		Thresholds: map[MetricType]float64{
 			MetricCPU:  90.0,
 			MetricMem:  90.0,
@@ -110,18 +111,13 @@ func GetConfigPath() (string, error) {
 		return "", err
 	}
 	configDir := filepath.Join(config, "bubble-monitor")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", err
 	}
 	return filepath.Join(configDir, "config.json"), nil
 }
 
-func LoadConfig() (AppConfig, error) {
-	path, err := GetConfigPath()
-	if err != nil {
-		return DefaultConfig(), err
-	}
-
+func LoadConfigFromPath(path string) (AppConfig, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -183,6 +179,14 @@ func LoadConfig() (AppConfig, error) {
 	}
 
 	return config, nil
+}
+
+func LoadConfig() (AppConfig, error) {
+	path, err := GetConfigPath()
+	if err != nil {
+		return DefaultConfig(), err
+	}
+	return LoadConfigFromPath(path)
 }
 
 func SaveConfig(config AppConfig) error {
