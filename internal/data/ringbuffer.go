@@ -143,3 +143,39 @@ type Accessor interface {
 	Get(i int) float64
 	Max() float64
 }
+
+// Resize creates a new buffer with the given size, preserving as much
+// existing data as possible (newest data is kept).
+func (r *RingBuffer) Resize(newSize int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if newSize == len(r.data) {
+		return
+	}
+
+	newData := make([]float64, newSize)
+
+	// Copy existing data, keeping the newest entries
+	count := r.length
+	if count > newSize {
+		count = newSize
+	}
+
+	// Read from oldest to newest
+	for i := 0; i < count; i++ {
+		if r.full {
+			idx := (r.curr + i) % len(r.data)
+			newData[i] = r.data[idx]
+		} else {
+			newData[i] = r.data[i]
+		}
+	}
+
+	r.data = newData
+	r.curr = count % newSize
+	r.length = count
+	r.full = count == newSize
+	r.maxDirty = true
+	r.sumDirty = true
+}
