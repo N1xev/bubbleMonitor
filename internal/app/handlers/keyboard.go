@@ -157,7 +157,8 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 	}
 
 	if m.UI.ShowSettings {
-		totalSettings := 24
+		totalSettings := data.TotalSettingsCount
+		tabsStart := data.ThresholdCount + data.DisplayCount
 
 		switch msg.String() {
 		case "esc", ".":
@@ -168,18 +169,18 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 			return nil
 		case "up", "k":
 			m.UI.SettingsIdx = (m.UI.SettingsIdx - 1 + totalSettings) % totalSettings
-			if m.UI.SettingsIdx < 4 {
+			if m.UI.SettingsIdx < data.ThresholdCount {
 				metrics := []config.MetricType{config.MetricCPU, config.MetricMem, config.MetricDisk, config.MetricTemp}
 				m.UI.SettingsSel = metrics[m.UI.SettingsIdx]
 			}
 		case "down", "j":
 			m.UI.SettingsIdx = (m.UI.SettingsIdx + 1) % totalSettings
-			if m.UI.SettingsIdx < 4 {
+			if m.UI.SettingsIdx < data.ThresholdCount {
 				metrics := []config.MetricType{config.MetricCPU, config.MetricMem, config.MetricDisk, config.MetricTemp}
 				m.UI.SettingsSel = metrics[m.UI.SettingsIdx]
 			}
 		case "+", "=", "right", "l":
-			if m.UI.SettingsIdx < 4 {
+			if m.UI.SettingsIdx < data.ThresholdCount {
 				curr := m.Config.Config.Thresholds[m.UI.SettingsSel]
 				if curr < 100 {
 					m.Config.Config.Thresholds[m.UI.SettingsSel] = curr + 1
@@ -189,7 +190,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				return AddToastCmd("Setting Changed", data.ToastSuccess)
 			}
 		case "-", "_", "left", "h":
-			if m.UI.SettingsIdx < 4 {
+			if m.UI.SettingsIdx < data.ThresholdCount {
 				curr := m.Config.Config.Thresholds[m.UI.SettingsSel]
 				if curr > 0 {
 					m.Config.Config.Thresholds[m.UI.SettingsSel] = curr - 1
@@ -197,6 +198,18 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 			} else {
 				handleSettingsChange(m, -1)
 				return AddToastCmd("Setting Changed", data.ToastSuccess)
+			}
+		case "[":
+			// Move tab earlier in the active tabs list
+			if m.UI.SettingsIdx >= tabsStart && m.UI.SettingsIdx < tabsStart+data.TabCount {
+				tabName := data.AllAvailableTabs[m.UI.SettingsIdx-tabsStart]
+				reorderTab(m, tabName, -1)
+			}
+		case "]":
+			// Move tab later in the active tabs list
+			if m.UI.SettingsIdx >= tabsStart && m.UI.SettingsIdx < tabsStart+data.TabCount {
+				tabName := data.AllAvailableTabs[m.UI.SettingsIdx-tabsStart]
+				reorderTab(m, tabName, 1)
 			}
 		}
 		return nil
@@ -212,7 +225,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 		}
 		return tea.Quit
 	case "e":
-		return nil
+		return func() tea.Msg { return messages.ExportSnapshotMsg{} }
 	case ".":
 		m.UI.ShowSettings = !m.UI.ShowSettings
 		if !m.UI.ShowSettings {
@@ -324,13 +337,14 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 			m.UI.HistoryLength = 60
 		}
 		m.Config.HistoryLength = m.UI.HistoryLength
-		m.Metrics.CpuHistory = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.MemHistory = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.NetHistory = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.SwapHistory = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.HistoryTemp = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.DiskHORead = data.NewRingBuffer(m.UI.HistoryLength)
-		m.Metrics.DiskHOWrite = data.NewRingBuffer(m.UI.HistoryLength)
+		m.Config.Config.HistoryLength = m.UI.HistoryLength
+		m.Metrics.CpuHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.MemHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.NetHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.SwapHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.HistoryTemp.Resize(m.UI.HistoryLength)
+		m.Metrics.DiskHORead.Resize(m.UI.HistoryLength)
+		m.Metrics.DiskHOWrite.Resize(m.UI.HistoryLength)
 	case "C":
 		switch m.UI.ChartType {
 		case "line":
@@ -364,7 +378,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.UI.CpuCoreScrollOffset = 0
 			}
 		} else if currentTab == "Services" && len(m.Process.Services) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -373,7 +387,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ServicesScrollOffset = 0
 			}
 		} else if currentTab == "Connections" && len(m.Process.Connections) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -382,7 +396,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ConnectionsScrollOffset = 0
 			}
 		} else if currentTab == "Logs" && len(m.Process.SystemLogs) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -391,7 +405,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.LogsScrollOffset = 0
 			}
 		} else if currentTab == "System" && m.UI.ActiveScrollBlock >= 0 && m.UI.SystemBlockScrollable[m.UI.ActiveScrollBlock] {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -417,7 +431,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 		} else if currentTab == "Metrics" {
 			m.UI.CpuCoreScrollOffset += 4
 		} else if currentTab == "Services" && len(m.Process.Services) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -430,7 +444,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ServicesScrollOffset = maxScroll
 			}
 		} else if currentTab == "Connections" && len(m.Process.Connections) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -443,7 +457,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ConnectionsScrollOffset = maxScroll
 			}
 		} else if currentTab == "Logs" && len(m.Process.SystemLogs) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -456,7 +470,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.LogsScrollOffset = maxScroll
 			}
 		} else if currentTab == "System" && m.UI.ActiveScrollBlock >= 0 && m.UI.SystemBlockScrollable[m.UI.ActiveScrollBlock] {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -580,7 +594,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 	case "p":
 		m.UI.Paused = !m.UI.Paused
 	case "r":
-		return nil
+		return func() tea.Msg { return messages.ForceRefreshMsg{} }
 	case "?":
 		m.UI.ShowHelp = true
 		m.UI.LastError = ""
@@ -598,7 +612,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				}
 			}
 		} else if currentTab == "Services" && len(m.Process.Services) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -610,7 +624,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ServicesScrollOffset++
 			}
 		} else if currentTab == "Connections" && len(m.Process.Connections) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -622,7 +636,7 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 				m.Process.ConnectionsScrollOffset++
 			}
 		} else if currentTab == "Logs" && len(m.Process.SystemLogs) > 0 {
-			rows := m.UI.Height - 19
+			rows := m.UI.Height - data.ReservedContentRows
 			if rows < 1 {
 				rows = 1
 			}
@@ -749,8 +763,12 @@ func HandleKey(m *data.AppState, msg tea.KeyMsg, getVisibleProcessesFunc func() 
 }
 
 func handleSettingsChange(m *data.AppState, dir int) {
+	displayStart := data.ThresholdCount
+	tabsStart := displayStart + data.DisplayCount
+	appearanceStart := tabsStart + data.TabCount
+
 	switch m.UI.SettingsIdx {
-	case 4:
+	case displayStart:
 		types := []string{"line", "bar", "braille"}
 		for i, t := range types {
 			if t == m.UI.ChartType {
@@ -761,7 +779,7 @@ func handleSettingsChange(m *data.AppState, dir int) {
 		}
 		m.Config.Config.ChartType = m.UI.ChartType
 
-	case 5:
+	case displayStart + 1:
 		m.Process.TreeView = !m.Process.TreeView
 		viewName := "normal"
 		if m.Process.TreeView {
@@ -770,7 +788,7 @@ func handleSettingsChange(m *data.AppState, dir int) {
 		m.Config.Config.ViewType = viewName
 		m.InvalidateProcessCache()
 
-	case 6:
+	case displayStart + 2:
 		opts := []string{"cpu", "mem", "pid", "name"}
 		for i, o := range opts {
 			if o == m.Process.SortBy {
@@ -782,7 +800,7 @@ func handleSettingsChange(m *data.AppState, dir int) {
 		m.Config.Config.SortBy = m.Process.SortBy
 		m.InvalidateProcessCache()
 
-	case 7:
+	case displayStart + 3:
 		lens := []int{60, 300, 900, 3600}
 		for i, l := range lens {
 			if l == m.UI.HistoryLength {
@@ -792,12 +810,20 @@ func handleSettingsChange(m *data.AppState, dir int) {
 			}
 		}
 		m.Config.HistoryLength = m.UI.HistoryLength
+		m.Config.Config.HistoryLength = m.UI.HistoryLength
+		m.Metrics.CpuHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.MemHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.NetHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.SwapHistory.Resize(m.UI.HistoryLength)
+		m.Metrics.HistoryTemp.Resize(m.UI.HistoryLength)
+		m.Metrics.DiskHORead.Resize(m.UI.HistoryLength)
+		m.Metrics.DiskHOWrite.Resize(m.UI.HistoryLength)
 
-	case 8:
+	case displayStart + 4:
 		m.Config.ProcessCpuNormalized = !m.Config.ProcessCpuNormalized
 		m.Config.Config.ProcessCpuNormalized = m.Config.ProcessCpuNormalized
 
-	case 9:
+	case displayStart + 5:
 		opts := []string{"asc", "desc"}
 		currIdx := 0
 		for i, o := range opts {
@@ -811,11 +837,11 @@ func handleSettingsChange(m *data.AppState, dir int) {
 		m.Config.Config.SortDirection = m.Process.SortDirection
 		m.InvalidateProcessCache()
 
-	case 10, 11, 12, 13, 14, 15, 16, 17, 18:
-		allTabs := []string{"Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"}
-		tabIdx := m.UI.SettingsIdx - 10
-		if tabIdx >= 0 && tabIdx < len(allTabs) {
-			targetTab := allTabs[tabIdx]
+	default:
+		// Tab toggle items
+		if m.UI.SettingsIdx >= tabsStart && m.UI.SettingsIdx < tabsStart+data.TabCount {
+			tabIdx := m.UI.SettingsIdx - tabsStart
+			targetTab := data.AllAvailableTabs[tabIdx]
 
 			idxInActive := -1
 			for i, t := range m.UI.ActiveTabs {
@@ -831,57 +857,83 @@ func handleSettingsChange(m *data.AppState, dir int) {
 				m.UI.ActiveTabs = append(m.UI.ActiveTabs, targetTab)
 			}
 			m.Config.Config.Tabs = m.UI.ActiveTabs
+			return
 		}
 
-	case 19:
-		themes := config.GetThemeNames()
-		for i, t := range themes {
-			if t == m.Config.Theme {
-				nextIdx := (i + dir + len(themes)) % len(themes)
-				m.Config.Theme = themes[nextIdx]
-				break
+		// Appearance items
+		appIdx := m.UI.SettingsIdx - appearanceStart
+		switch appIdx {
+		case 0:
+			themes := config.GetThemeNames()
+			for i, t := range themes {
+				if t == m.Config.Theme {
+					nextIdx := (i + dir + len(themes)) % len(themes)
+					m.Config.Theme = themes[nextIdx]
+					break
+				}
 			}
-		}
-		m.Config.Config.Theme = m.Config.Theme
-		if m.Config.Theme == "custom" && m.Config.Config.CustomTheme == nil {
-			m.Config.Config.CustomTheme = config.DefaultCustomTheme()
-		}
-
-	case 20:
-		rates := config.GetRefreshRates()
-		for i, r := range rates {
-			if r == m.Config.RefreshRate {
-				nextIdx := (i + dir + len(rates)) % len(rates)
-				m.Config.RefreshRate = rates[nextIdx]
-				break
+			m.Config.Config.Theme = m.Config.Theme
+			if m.Config.Theme == "custom" && m.Config.Config.CustomTheme == nil {
+				m.Config.Config.CustomTheme = config.DefaultCustomTheme()
 			}
-		}
-		m.Config.Config.RefreshRate = m.Config.RefreshRate
 
-	case 21:
-		types := config.GetBorderTypes()
-		for i, t := range types {
-			if t == m.Config.BorderType {
-				nextIdx := (i + dir + len(types)) % len(types)
-				m.Config.BorderType = types[nextIdx]
-				break
+		case 1:
+			rates := config.GetRefreshRates()
+			for i, r := range rates {
+				if r == m.Config.RefreshRate {
+					nextIdx := (i + dir + len(rates)) % len(rates)
+					m.Config.RefreshRate = rates[nextIdx]
+					break
+				}
 			}
-		}
-		m.Config.Config.BorderType = m.Config.BorderType
+			m.Config.Config.RefreshRate = m.Config.RefreshRate
 
-	case 22:
-		styles := config.GetBorderStyles()
-		for i, s := range styles {
-			if s == m.Config.BorderStyle {
-				nextIdx := (i + dir + len(styles)) % len(styles)
-				m.Config.BorderStyle = styles[nextIdx]
-				break
+		case 2:
+			types := config.GetBorderTypes()
+			for i, t := range types {
+				if t == m.Config.BorderType {
+					nextIdx := (i + dir + len(types)) % len(types)
+					m.Config.BorderType = types[nextIdx]
+					break
+				}
 			}
-		}
-		m.Config.Config.BorderStyle = m.Config.BorderStyle
+			m.Config.Config.BorderType = m.Config.BorderType
 
-	case 23:
-		m.Config.BackgroundOpaque = !m.Config.BackgroundOpaque
-		m.Config.Config.BackgroundOpaque = m.Config.BackgroundOpaque
+		case 3:
+			styles := config.GetBorderStyles()
+			for i, s := range styles {
+				if s == m.Config.BorderStyle {
+					nextIdx := (i + dir + len(styles)) % len(styles)
+					m.Config.BorderStyle = styles[nextIdx]
+					break
+				}
+			}
+			m.Config.Config.BorderStyle = m.Config.BorderStyle
+
+		case 4:
+			m.Config.BackgroundOpaque = !m.Config.BackgroundOpaque
+			m.Config.Config.BackgroundOpaque = m.Config.BackgroundOpaque
+		}
 	}
+}
+
+// reorderTab moves a tab earlier (dir=-1) or later (dir=+1) in the active tabs list.
+func reorderTab(m *data.AppState, tabName string, dir int) {
+	idx := -1
+	for i, t := range m.UI.ActiveTabs {
+		if t == tabName {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		// Tab is not currently active, nothing to reorder
+		return
+	}
+	newIdx := idx + dir
+	if newIdx < 0 || newIdx >= len(m.UI.ActiveTabs) {
+		return
+	}
+	m.UI.ActiveTabs[idx], m.UI.ActiveTabs[newIdx] = m.UI.ActiveTabs[newIdx], m.UI.ActiveTabs[idx]
+	m.Config.Config.Tabs = m.UI.ActiveTabs
 }
