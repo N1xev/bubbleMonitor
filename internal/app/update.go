@@ -67,23 +67,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		handlers.HandleToastTimeout(&m.AppState, msg)
 
 	case messages.OpenFilesMsg:
-		if msg.Err != nil {
-			m.Process.ShowOpenFiles = false
-			return m, handlers.AddToastCmd(fmt.Sprintf("Open Files Error: %v", msg.Err), data.ToastError)
-		}
-		m.Process.OpenFilesList = msg.Files
 		m.Process.OpenFilesPid = msg.Pid
 
 		var lines []string
-		for _, f := range msg.Files {
-			lines = append(lines, f.Path)
-		}
-		if len(lines) == 0 {
-			lines = []string{"No open files found or access denied."}
+		if msg.Err != nil {
+			lines = []string{fmt.Sprintf("Error: %v", msg.Err), "", "Try running as root for full access."}
+		} else {
+			m.Process.OpenFilesList = msg.Files
+			for _, f := range msg.Files {
+				lines = append(lines, f.Path)
+			}
+			if len(lines) == 0 {
+				lines = []string{"No open files found or access denied.", "", "Try running as root for full access."}
+			}
 		}
 		content := strings.Join(lines, "\n")
-		m.OpenFilesView.SetContent(content)
-		m.OpenFilesView.GotoTop()
+		m.Process.OpenFilesView.SetContent(content)
+		m.Process.OpenFilesView.GotoTop()
 
 		return m, nil
 
@@ -102,6 +102,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Process.OpenFilesList = nil
 		m.Process.ShowOpenFiles = true
 		return m, m.Provider.Process.FetchOpenFilesCmd(msg.Pid)
+
+	case messages.ExportSnapshotMsg:
+		return m, SaveSnapshotCmd(m.Metrics.Cpu, m.Metrics.Memory, m.Metrics.Disk, m.Process.ProcessCount)
+
+	case messages.ForceRefreshMsg:
+		cmds := []tea.Cmd{
+			m.Provider.System.FastMetricsCmd(),
+			m.Provider.System.SlowMetricsCmd(),
+			m.Provider.System.HostInfoCmd(),
+		}
+		currentTab := ""
+		if m.UI.SelectedTab < len(m.UI.ActiveTabs) && m.UI.SelectedTab >= 0 {
+			currentTab = m.UI.ActiveTabs[m.UI.SelectedTab]
+		}
+		if currentTab == "Processes" || currentTab == "System" {
+			cmds = append(cmds, m.Provider.Process.ProcessesCmd(m.Process.SortBy, m.Process.SortDirection))
+		}
+		return m, tea.Batch(cmds...)
 
 	case messages.QuitMsg:
 		if m.UI.SelectedTab >= 0 && m.UI.SelectedTab < len(m.UI.ActiveTabs) {
@@ -124,7 +142,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			m.Config.Config = newConfig
-			m.UI.HistoryLength = newConfig.HistoryLength
+			if m.UI.HistoryLength != newConfig.HistoryLength {
+				m.UI.HistoryLength = newConfig.HistoryLength
+				m.Config.HistoryLength = newConfig.HistoryLength
+				m.Metrics.CpuHistory.Resize(m.UI.HistoryLength)
+				m.Metrics.MemHistory.Resize(m.UI.HistoryLength)
+				m.Metrics.NetHistory.Resize(m.UI.HistoryLength)
+				m.Metrics.SwapHistory.Resize(m.UI.HistoryLength)
+				m.Metrics.HistoryTemp.Resize(m.UI.HistoryLength)
+				m.Metrics.DiskHORead.Resize(m.UI.HistoryLength)
+				m.Metrics.DiskHOWrite.Resize(m.UI.HistoryLength)
+			}
 			m.UI.ChartType = newConfig.ChartType
 			m.Process.SortBy = newConfig.SortBy
 			m.Process.SortDirection = newConfig.SortDirection
@@ -418,6 +446,6 @@ func (m *Model) getFilteredProcessCount() int {
 }
 
 func (m *Model) getVisibleProcessRows() int {
-	rows := max(m.UI.Height-19, 3)
+	rows := max(m.UI.Height-data.ReservedContentRows, 3)
 	return rows
 }
