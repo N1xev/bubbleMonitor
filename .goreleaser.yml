@@ -10,10 +10,24 @@ builds:
   - id: bubbleMonitor
     main: ./cmd/bub
     binary: bub
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
+      - darwin
+      - windows
     goarch:
       - amd64
+      - arm64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
