@@ -53,11 +53,6 @@ func (s *SumAccessor) Max() float64 {
 func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
 	width := app.UI.Width
 
-	chartCols := 1
-	if width >= 100 {
-		chartCols = 2
-	}
-
 	coreCols := 1
 	if width >= 60 {
 		coreCols = 2
@@ -79,6 +74,11 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 
 	numCoreRows := (numCores + coreCols - 1) / coreCols
 	coreSectionHeight := numCoreRows + 2
+
+	chartCols := 1
+	if width >= 100 {
+		chartCols = 2
+	}
 
 	availChartSpace := availHeight - coreSectionHeight
 	minChartSpace := 6
