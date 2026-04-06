@@ -254,13 +254,9 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 		maxV = 1
 	}
 
+	dotColumns := width * 2
 	dotsPerCol := height * 4
-
-	sampleWidth := width * 2
-	startIdx := 0
-	if data.Len() > sampleWidth {
-		startIdx = data.Len() - sampleWidth
-	}
+	dataLen := data.Len()
 
 	gridPtr, ok := boolGridPool.Get().(*[][]bool)
 	if !ok {
@@ -275,21 +271,30 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 	}
 
 	for r := 0; r < dotsPerCol; r++ {
-		if cap(dots[r]) < sampleWidth {
-			dots[r] = make([]bool, sampleWidth)
+		if cap(dots[r]) < dotColumns {
+			dots[r] = make([]bool, dotColumns)
 		} else {
-			dots[r] = dots[r][:sampleWidth]
+			dots[r] = dots[r][:dotColumns]
 			for c := range dots[r] {
 				dots[r][c] = false
 			}
 		}
 	}
 
-	for col := 0; col < sampleWidth && (startIdx+col) < data.Len(); col++ {
+	// Standard braille chart: always show the last min(dataLen, dotColumns)
+	// data points, 1 data point per dot column (2 per braille char).
+	// Data grows from left, scrolls left once full.
+	// History length only controls ring buffer capacity, not visible resolution.
+	sampleWidth := dataLen
+	if sampleWidth > dotColumns {
+		sampleWidth = dotColumns
+	}
+	startIdx := dataLen - sampleWidth
+
+	for col := 0; col < sampleWidth; col++ {
 		val := data.Get(startIdx + col)
 		normalized := val / maxV
 		filledDots := int(normalized * float64(dotsPerCol))
-
 		for row := dotsPerCol - 1; row >= dotsPerCol-filledDots && row >= 0; row-- {
 			dots[row][col] = true
 		}
@@ -307,33 +312,29 @@ func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.Ada
 			dotCol := charCol * 2
 
 			var braille rune = 0x2800
-			if dotCol < sampleWidth {
-				if dotRow < dotsPerCol && dots[dotRow][dotCol] {
-					braille += 1
-				}
-				if dotRow+1 < dotsPerCol && dots[dotRow+1][dotCol] {
-					braille += 2
-				}
-				if dotRow+2 < dotsPerCol && dots[dotRow+2][dotCol] {
-					braille += 4
-				}
-				if dotRow+3 < dotsPerCol && dots[dotRow+3][dotCol] {
-					braille += 64
-				}
+			if dotRow < dotsPerCol && dots[dotRow][dotCol] {
+				braille += 1
 			}
-			if dotCol+1 < sampleWidth {
-				if dotRow < dotsPerCol && dots[dotRow][dotCol+1] {
-					braille += 8
-				}
-				if dotRow+1 < dotsPerCol && dots[dotRow+1][dotCol+1] {
-					braille += 16
-				}
-				if dotRow+2 < dotsPerCol && dots[dotRow+2][dotCol+1] {
-					braille += 32
-				}
-				if dotRow+3 < dotsPerCol && dots[dotRow+3][dotCol+1] {
-					braille += 128
-				}
+			if dotRow+1 < dotsPerCol && dots[dotRow+1][dotCol] {
+				braille += 2
+			}
+			if dotRow+2 < dotsPerCol && dots[dotRow+2][dotCol] {
+				braille += 4
+			}
+			if dotRow+3 < dotsPerCol && dots[dotRow+3][dotCol] {
+				braille += 64
+			}
+			if dotRow < dotsPerCol && dots[dotRow][dotCol+1] {
+				braille += 8
+			}
+			if dotRow+1 < dotsPerCol && dots[dotRow+1][dotCol+1] {
+				braille += 16
+			}
+			if dotRow+2 < dotsPerCol && dots[dotRow+2][dotCol+1] {
+				braille += 32
+			}
+			if dotRow+3 < dotsPerCol && dots[dotRow+3][dotCol+1] {
+				braille += 128
 			}
 			line.WriteRune(braille)
 		}
