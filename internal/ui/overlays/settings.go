@@ -14,14 +14,25 @@ import (
 
 // RenderSettingsOverlay renders the settings configuration modal
 func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg compat.AdaptiveColor) string {
-	boxWidth := min(data.SettingsDefaultWidth, width-4)
-
-	boxHeight := min(data.SettingsDefaultHeight, height-4)
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
 	itemStyle := lipgloss.NewStyle().Foreground(t)
 	selectedStyle := lipgloss.NewStyle().Foreground(p).Bold(true).Border(border, false, false, false, true).BorderForeground(p).PaddingLeft(1)
 	headerStyle := lipgloss.NewStyle().Foreground(p).Bold(true).MarginBottom(1)
+
+	// Calculate dynamic label width from the longest label
+	labelWidth := 0
+	allLabels := []string{
+		"CPU Alert:", "Mem Alert:", "Disk Alert:", "Temp Alert:",
+		"Chart Type:", "View Type:", "Sort By:", "History Length:", "Process CPU:", "Sort Direction:",
+		"Theme:", "Refresh Rate:", "Border Type:", "Border Style:", "Background:",
+	}
+	for _, l := range allLabels {
+		if len(l) > labelWidth {
+			labelWidth = len(l)
+		}
+	}
+	labelFmt := fmt.Sprintf("%%-%ds %%s", labelWidth)
 
 	var col1 []string
 	col1 = append(col1, headerStyle.Render("THRESHOLDS & DISPLAY"))
@@ -42,7 +53,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		if item.metric == config.MetricTemp {
 			val = fmt.Sprintf("%.0f°C", s.Config.Config.Thresholds[item.metric])
 		}
-		line := fmt.Sprintf("%-15s %s", item.label, val)
+		line := fmt.Sprintf(labelFmt, item.label, val)
 		if s.UI.SettingsIdx == item.idx {
 			col1 = append(col1, selectedStyle.Render(line))
 		} else {
@@ -55,24 +66,26 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		viewName = "tree"
 	}
 
+	displayStart := data.ThresholdCount
+
 	displayItems := []struct {
 		label string
 		value string
 		idx   int
 	}{
-		{"Chart Type:", s.UI.ChartType, 4},
-		{"View Type:", viewName, 5},
-		{"Sort By:", s.Process.SortBy, 6},
-		{"History Length:", fmt.Sprintf("%ds", s.UI.HistoryLength), 7},
-		{"Process CPU:", "Raw", 8},
-		{"Sort Direction:", s.Process.SortDirection, 9},
+		{"Chart Type:", s.UI.ChartType, displayStart},
+		{"View Type:", viewName, displayStart + 1},
+		{"Sort By:", s.Process.SortBy, displayStart + 2},
+		{"History Length:", fmt.Sprintf("%ds", s.UI.HistoryLength), displayStart + 3},
+		{"Process CPU:", "Raw", displayStart + 4},
+		{"Sort Direction:", s.Process.SortDirection, displayStart + 5},
 	}
 	if s.Config.ProcessCpuNormalized {
 		displayItems[4].value = "Normalized"
 	}
 
 	for _, item := range displayItems {
-		line := fmt.Sprintf("%-15s %s", item.label, item.value)
+		line := fmt.Sprintf(labelFmt, item.label, item.value)
 		if s.UI.SettingsIdx == item.idx {
 			col1 = append(col1, selectedStyle.Render(line))
 		} else {
@@ -83,10 +96,9 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	var col2 []string
 	col2 = append(col2, headerStyle.Render("TABS"))
 
-	allTabs := []string{"Metrics", "Processes", "Disks", "Network", "System", "Services", "Connections", "Logs", "Remote"}
-	currentTabIdxBase := 10
+	currentTabIdxBase := displayStart + data.DisplayCount
 
-	for i, tabName := range allTabs {
+	for i, tabName := range data.AllAvailableTabs {
 		idx := currentTabIdxBase + i
 		isEnabled := slices.Contains(s.UI.ActiveTabs, tabName)
 
@@ -106,7 +118,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	var col3 []string
 	col3 = append(col3, headerStyle.Render("APPEARANCE"))
 
-	appearanceIdxBase := currentTabIdxBase + len(allTabs)
+	appearanceIdxBase := currentTabIdxBase + len(data.AllAvailableTabs)
 
 	bgLabel := "transparent"
 	if s.Config.BackgroundOpaque {
@@ -126,7 +138,7 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 	}
 
 	for _, item := range appItems {
-		line := fmt.Sprintf("%-15s %s", item.label, item.value)
+		line := fmt.Sprintf(labelFmt, item.label, item.value)
 		if s.UI.SettingsIdx == item.idx {
 			col3 = append(col3, selectedStyle.Render(line))
 		} else {
@@ -134,29 +146,51 @@ func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg 
 		}
 	}
 
-	contentWidth := boxWidth - 6
-	colWidth := contentWidth / 3
+	// Calculate box width from actual content, not a fixed constant
 	col1Content := lipgloss.JoinVertical(lipgloss.Left, col1...)
 	col2Content := lipgloss.JoinVertical(lipgloss.Left, col2...)
 	col3Content := lipgloss.JoinVertical(lipgloss.Left, col3...)
 
+	// Use MarginRight for gap between columns instead of forced Width
 	contentBlock := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.NewStyle().Width(colWidth).Render(col1Content),
-		lipgloss.NewStyle().Width(colWidth).Render(col2Content),
-		lipgloss.NewStyle().Width(colWidth).Render(col3Content),
+		lipgloss.NewStyle().MarginRight(2).Render(col1Content),
+		lipgloss.NewStyle().MarginRight(2).Render(col2Content),
+		col3Content,
 	)
 
-	hint := lipgloss.NewStyle().Foreground(mu).Align(lipgloss.Center).Width(boxWidth - 6).MarginTop(1).Render("↑/↓ select • ←/→ change/toggle • . to close")
+	// Measure actual rendered width instead of calculating
+	contentWidth := lipgloss.Width(contentBlock)
+	// Clamp to screen
+	if contentWidth > width-8 {
+		contentWidth = width - 8
+	}
+
+	// Count content lines to push hint to bottom
+	contentLines := lipgloss.Height(contentBlock)
+	hintText := lipgloss.NewStyle().Foreground(mu).Align(lipgloss.Center).Width(contentWidth).Render("↑/↓ select • ←/→ toggle • [ ] reorder tabs • . to close")
+	hintLines := lipgloss.Height(hintText)
+	// boxHeight = content padding(2) + contentLines + gap + hintLines + bottom padding(1)
+	boxHeight := 2 + contentLines + 1 + hintLines + 1
+	boxHeight = min(boxHeight, height-4)
 
 	container := lipgloss.NewStyle().
 		Border(border).
 		BorderForeground(b).
 		Padding(1, 2).
-		Width(boxWidth - 6).
+		MaxWidth(width - 6).
 		Height(boxHeight).
 		BorderTop(false)
 
-	body := container.Render(lipgloss.JoinVertical(lipgloss.Left, contentBlock, hint))
+	// Place hint at the bottom: contentBlock fills top, padding pushes hint down
+	innerHeight := boxHeight - 2 - 2 // subtract border + padding
+	paddingBelow := innerHeight - contentLines - hintLines
+	if paddingBelow < 0 {
+		paddingBelow = 0
+	}
+
+	paddedContent := lipgloss.NewStyle().Height(contentLines).Render(contentBlock)
+	spacer := lipgloss.NewStyle().Height(paddingBelow).Render("")
+	body := container.Render(lipgloss.JoinVertical(lipgloss.Left, paddedContent, spacer, hintText))
 	actualWidth := lipgloss.Width(body)
 
 	topBorder := widgets.RenderTopBorderWithBg("CONFIGURATION", actualWidth, border, b, p)
