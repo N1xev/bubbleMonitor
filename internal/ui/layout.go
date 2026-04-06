@@ -800,10 +800,13 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 		contentStartY := sY + 2 // Border + padding
 		colWidth := (sWidth - 6) / 3
 
-		// Column 1: Thresholds & Display (indices 0-9)
+		// Column 1: Thresholds & Display
+		thresholdDisplayCount := data.ThresholdCount + data.DisplayCount
+		tabsStart := thresholdDisplayCount
+		appearanceStart := tabsStart + data.TabCount
 		col1X := sX + 3
 		col1StartY := contentStartY + 1 // After header
-		for i := 0; i <= 9; i++ {
+		for i := 0; i < thresholdDisplayCount; i++ {
 			itemIdx := i
 			zoneManager.Register(input.Zone{
 				ID:     fmt.Sprintf("settings-item-%d", itemIdx),
@@ -819,11 +822,11 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 			})
 		}
 
-		// Column 2: Tabs (indices 10-18)
+		// Column 2: Tabs
 		col2X := col1X + colWidth
 		col2StartY := contentStartY + 1
-		for i := 0; i <= 8; i++ {
-			itemIdx := 10 + i
+		for i := 0; i < data.TabCount; i++ {
+			itemIdx := tabsStart + i
 			zoneManager.Register(input.Zone{
 				ID:     fmt.Sprintf("settings-item-%d", itemIdx),
 				Type:   input.ZoneTypeListItem,
@@ -838,11 +841,11 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 			})
 		}
 
-		// Column 3: Appearance (indices 19-23)
+		// Column 3: Appearance
 		col3X := col2X + colWidth
 		col3StartY := contentStartY + 1
-		for i := 0; i <= 4; i++ {
-			itemIdx := 19 + i
+		for i := 0; i < data.AppearanceCount; i++ {
+			itemIdx := appearanceStart + i
 			zoneManager.Register(input.Zone{
 				ID:     fmt.Sprintf("settings-item-%d", itemIdx),
 				Type:   input.ZoneTypeListItem,
