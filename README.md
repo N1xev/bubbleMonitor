@@ -36,26 +36,31 @@ go install github.com/N1xev/bubbleMonitor/cmd/bub@latest
 ### Linux
 
 ```bash
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_linux_amd64.tar.gz -o bub.tar.gz
-tar -xzf bub.tar.gz
-sudo mv bubbleMonitor_linux_amd64_v1/bub /usr/local/bin/
-rm bub.tar.gz
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_linux_amd64 -o bub
+chmod +x bub
+sudo mv bub /usr/local/bin/
 ```
 
-### macOS
+### macOS (Intel)
 
 ```bash
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_darwin_amd64.tar.gz -o bub.tar.gz
-tar -xzf bub.tar.gz
-sudo mv bubbleMonitor_darwin_amd64_v1/bub /usr/local/bin/
-rm bub.tar.gz
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_darwin_amd64 -o bub
+chmod +x bub
+sudo mv bub /usr/local/bin/
+```
+
+### macOS (Apple Silicon)
+
+```bash
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_darwin_arm64 -o bub
+chmod +x bub
+sudo mv bub /usr/local/bin/
 ```
 
 ### Windows
 
 ```powershell
-curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_windows_amd64.zip -o bub.zip
-Expand-Archive bub.zip
+curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bubbleMonitor_windows_amd64.exe -o bub.exe
 ```
 
 ## Build from Source

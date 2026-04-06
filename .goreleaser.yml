@@ -37,6 +37,8 @@ builds:
 archives:
   - id: binaries
     format: binary
+    # Make binaries available as standalone downloads
+    allowDifferentBinaryNaming: true
   - id: archives
     formats:
       - tar.gz
