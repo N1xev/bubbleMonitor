@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	headerFooterRows = 19
+	headerFooterRows = data.ReservedContentRows
 	headerOffset     = 3
 )
 
@@ -144,7 +144,7 @@ func handleScrollUp(m *data.AppState) tea.Cmd {
 			}
 		}
 	} else if m.Process.ShowOpenFiles {
-		m.OpenFilesView.LineUp(1)
+		m.Process.OpenFilesView.LineUp(1)
 	}
 	return nil
 }
@@ -217,12 +217,12 @@ func handleScrollDown(m *data.AppState) tea.Cmd {
 			}
 		}
 	} else if m.Process.ShowOpenFiles {
-		m.OpenFilesView.LineDown(1)
+		m.Process.OpenFilesView.LineDown(1)
 	}
 	return nil
 }
 
 func getVisibleProcessRows(m *data.AppState) int {
-	rows := max(m.UI.Height-19, 3)
+	rows := max(m.UI.Height-data.ReservedContentRows, 3)
 	return rows
 }
