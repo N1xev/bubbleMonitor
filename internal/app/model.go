@@ -129,13 +129,7 @@ func (m *Model) GetBorder() lipgloss.Border {
 	}
 }
 
-func InitialModel() *Model {
-	cfg, err := configpkg.LoadConfig()
-	if err != nil {
-		// Fallback to default if error
-		cfg = configpkg.DefaultConfig()
-	}
-
+func InitialModelWithConfig(cfg configpkg.AppConfig) *Model {
 	// Ensure tabs are populated immediately - fallback to defaults if empty
 	if len(cfg.Tabs) == 0 {
 		cfg.Tabs = configpkg.DefaultConfig().Tabs
@@ -225,4 +219,12 @@ func InitialModel() *Model {
 			Remote:  provider.NewRemoteAdapter(),
 		},
 	}
+}
+
+func InitialModel() *Model {
+	cfg, err := configpkg.LoadConfig()
+	if err != nil {
+		cfg = configpkg.DefaultConfig()
+	}
+	return InitialModelWithConfig(cfg)
 }
