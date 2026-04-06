@@ -12,7 +12,6 @@ type AppState struct {
 	Config  ConfigState
 	Remote  RemoteState
 
-	OpenFilesView SimpleViewport
 	LastErrorTime time.Time
 
 	stateMu sync.RWMutex
