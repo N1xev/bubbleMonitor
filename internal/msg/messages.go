@@ -132,6 +132,12 @@ type ToastTimeoutMsg struct {
 
 type QuitMsg struct{}
 
+// ExportSnapshotMsg triggers a metrics snapshot export to file.
+type ExportSnapshotMsg struct{}
+
+// ForceRefreshMsg triggers an immediate metrics refresh without rescheduling the tick timer.
+type ForceRefreshMsg struct{}
+
 // KillProcessMsg is sent when a process kill is requested
 type KillProcessMsg struct {
 	Error   string
