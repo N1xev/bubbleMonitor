@@ -24,10 +24,10 @@ builds:
         goarch: amd64
         env:
           - CGO_ENABLED=1
-      - goos: linux
-        goarch: arm64
-        env:
-          - CGO_ENABLED=1
+    hooks:
+      post:
+        - cp "{{ .Path }}" dist/bub_{{ .Os }}_{{ .Arch }}
+        - chmod +x dist/bub_{{ .Os }}_{{ .Arch }}
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -37,17 +37,16 @@ builds:
 archives:
   - id: binaries
     format: binary
-    # Make binaries available as standalone downloads
-    allowDifferentBinaryNaming: true
+    name_template: "bub_{{ .Os }}_{{ .Arch }}"
   - id: archives
     formats:
       - tar.gz
       - zip
-    wrap_in_directory: true
-    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
+    wrap_in_directory: false
+    name_template: "bub_{{ .Os }}_{{ .Arch }}"
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 release:
   github:
@@ -55,13 +54,13 @@ release:
     name: bubbleMonitor
   draft: false
   prerelease: auto
-  name_template: '{{.Tag}}'
+  name_template: "{{.Tag}}"
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^refactor:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^refactor:"
