@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"charm.land/lipgloss/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/spf13/cobra"
 
+	"github.com/N1xev/bubbleMonitor/internal/cliout"
 	configpkg "github.com/N1xev/bubbleMonitor/internal/config"
 )
 
@@ -36,8 +38,9 @@ func printHealth(cmd *cobra.Command) error {
 
 	score := 100
 	out := cmd.OutOrStdout()
+	s := loadCLIStyles()
 
-	fmt.Fprintf(out, "\n")
+	lipgloss.Fprintf(out, "\n")
 
 	// CPU
 	cpuStatus := "OK"
@@ -48,7 +51,10 @@ func printHealth(cmd *cobra.Command) error {
 		cpuStatus = "HIGH"
 		score -= weights.CpuHigh
 	}
-	fmt.Fprintf(out, "  CPU:        %s (%.1f%%)\n", cpuStatus, cpuVal)
+	lipgloss.Fprintf(out, "  %s  %s (%s)\n",
+		s.Label.Render("CPU:"),
+		styleStatus(s, cpuStatus),
+		s.Value.Render(fmt.Sprintf("%.1f%%", cpuVal)))
 
 	// Memory
 	memStatus := "OK"
@@ -59,7 +65,10 @@ func printHealth(cmd *cobra.Command) error {
 		memStatus = "HIGH"
 		score -= weights.MemHigh
 	}
-	fmt.Fprintf(out, "  Memory:     %s (%.1f%%)\n", memStatus, memVal)
+	lipgloss.Fprintf(out, "  %s  %s (%s)\n",
+		s.Label.Render("Memory:"),
+		styleStatus(s, memStatus),
+		s.Value.Render(fmt.Sprintf("%.1f%%", memVal)))
 
 	// Disk
 	diskStatus := "OK"
@@ -67,7 +76,10 @@ func printHealth(cmd *cobra.Command) error {
 		diskStatus = "CRITICAL"
 		score -= weights.DiskCritical
 	}
-	fmt.Fprintf(out, "  Disk:       %s (%.1f%%)\n", diskStatus, diskVal)
+	lipgloss.Fprintf(out, "  %s  %s (%s)\n",
+		s.Label.Render("Disk:"),
+		styleStatus(s, diskStatus),
+		s.Value.Render(fmt.Sprintf("%.1f%%", diskVal)))
 
 	// Temperature
 	tempStatus := "OK"
@@ -78,13 +90,18 @@ func printHealth(cmd *cobra.Command) error {
 		tempStatus = "HIGH"
 		score -= weights.TempHigh
 	}
-	fmt.Fprintf(out, "  Temp:       %s (%.0f°C)\n", tempStatus, tempVal)
+	lipgloss.Fprintf(out, "  %s  %s (%s)\n",
+		s.Label.Render("Temp:"),
+		styleStatus(s, tempStatus),
+		s.Value.Render(fmt.Sprintf("%.0f°C", tempVal)))
 
 	if score < 0 {
 		score = 0
 	}
 
-	fmt.Fprintf(out, "\n  Health Score: %d/100\n\n", score)
+	lipgloss.Fprintf(out, "\n  %s %s\n\n",
+		s.Label.Render("Health Score:"),
+		s.ScoreColor(score).Bold(true).Render(fmt.Sprintf("%d/100", score)))
 
 	if score < 50 {
 		os.Exit(2)
@@ -92,6 +109,20 @@ func printHealth(cmd *cobra.Command) error {
 		os.Exit(1)
 	}
 	return nil
+}
+
+// styleStatus returns a themed rendering of the status string.
+func styleStatus(s cliout.CLIStyles, status string) string {
+	switch status {
+	case "OK":
+		return s.OK.Render("OK")
+	case "HIGH":
+		return s.Warn.Render("HIGH")
+	case "CRITICAL":
+		return s.Critical.Render("CRITICAL")
+	default:
+		return status
+	}
 }
 
 func fetchCPUPct() float64 {
