@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	configpkg "github.com/N1xev/bubbleMonitor/internal/config"
@@ -69,7 +70,8 @@ func newConfigSetCmd() *cobra.Command {
 			if err := configpkg.SaveConfig(cfg); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Set %s = %s\n", key, value)
+			s := loadCLIStyles()
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s %s = %s\n", s.OK.Render("Set"), s.Label.Render(key), s.Value.Render(value))
 			return nil
 		},
 	}
@@ -85,7 +87,8 @@ func newConfigResetCmd() *cobra.Command {
 			if err := configpkg.SaveConfig(defaults); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Configuration reset to defaults.")
+			s := loadCLIStyles()
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s Configuration reset to defaults.\n", s.OK.Render("Reset"))
 			return nil
 		},
 	}
@@ -101,7 +104,8 @@ func newConfigPathCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), path)
+			s := loadCLIStyles()
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s\n", s.Value.Render(path))
 			return nil
 		},
 	}
