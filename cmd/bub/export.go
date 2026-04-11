@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
@@ -138,7 +139,12 @@ func exportJSON(s metricsSnapshot) error {
 	}
 
 	if exportOutput != "" {
-		return os.WriteFile(exportOutput, data, 0o644)
+		if err := os.WriteFile(exportOutput, data, 0o644); err != nil {
+			return err
+		}
+		s := loadCLIStyles()
+		lipgloss.Fprintf(os.Stdout, "%s Exported snapshot to %s\n", s.CheckOK, s.Value.Render(exportOutput))
+		return nil
 	}
 	fmt.Println(string(data))
 	return nil
@@ -153,7 +159,12 @@ func exportCSV(s metricsSnapshot) error {
 		s.LoadAvg1, s.LoadAvg5, s.LoadAvg15, s.Uptime)
 
 	if exportOutput != "" {
-		return os.WriteFile(exportOutput, []byte(csv), 0o644)
+		if err := os.WriteFile(exportOutput, []byte(csv), 0o644); err != nil {
+			return err
+		}
+		s := loadCLIStyles()
+		lipgloss.Fprintf(os.Stdout, "%s Exported snapshot to %s\n", s.CheckOK, s.Value.Render(exportOutput))
+		return nil
 	}
 	fmt.Print(csv)
 	return nil
