@@ -127,3 +127,149 @@ func TestActiveIsBold(t *testing.T) {
 		t.Error("Active style should produce ANSI codes (bold + Primary foreground)")
 	}
 }
+
+func TestBarColor(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// pct=50 -> Success (default)
+	rendered := s.BarColor(50).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("BarColor(50) should return Success-colored style")
+	}
+
+	// pct=70 -> Warning (>=60)
+	rendered = s.BarColor(70).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("BarColor(70) should return Warning-colored style")
+	}
+
+	// pct=90 -> Alert (>=80)
+	rendered = s.BarColor(90).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("BarColor(90) should return Alert-colored style")
+	}
+}
+
+func TestBarColorBoundaries(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// Exact boundary: pct=60 -> Warning
+	rendered := s.BarColor(60).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("BarColor(60) should return Warning-colored style (>=60 boundary)")
+	}
+
+	// Exact boundary: pct=80 -> Alert
+	rendered = s.BarColor(80).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("BarColor(80) should return Alert-colored style (>=80 boundary)")
+	}
+}
+
+func TestScoreColor(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// score=80 -> Success (>=70)
+	rendered := s.ScoreColor(80).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("ScoreColor(80) should return Success-colored style")
+	}
+
+	// score=55 -> Warning (>=50, <70)
+	rendered = s.ScoreColor(55).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("ScoreColor(55) should return Warning-colored style")
+	}
+
+	// score=30 -> Alert (<50)
+	rendered = s.ScoreColor(30).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("ScoreColor(30) should return Alert-colored style")
+	}
+}
+
+func TestScoreColorBoundaries(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// Exact boundary: score=70 -> Success
+	rendered := s.ScoreColor(70).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("ScoreColor(70) should return Success-colored style (>=70 boundary)")
+	}
+
+	// Exact boundary: score=50 -> Warning
+	rendered = s.ScoreColor(50).Render("x")
+	if len(rendered) <= 1 {
+		t.Error("ScoreColor(50) should return Warning-colored style (>=50 boundary)")
+	}
+}
+
+func TestRenderBar(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// pct=50, width=10: 5 filled + 5 empty
+	bar := s.RenderBar(50, 10)
+	if !strings.Contains(bar, "\u2588") {
+		t.Error("RenderBar(50,10) should contain filled blocks (\u2588)")
+	}
+	if !strings.Contains(bar, "\u2591") {
+		t.Error("RenderBar(50,10) should contain empty blocks (\u2591)")
+	}
+
+	// pct=0, width=10: all empty
+	bar = s.RenderBar(0, 10)
+	if strings.Contains(bar, "\u2588") {
+		t.Error("RenderBar(0,10) should not contain filled blocks")
+	}
+
+	// pct=100, width=10: all filled
+	bar = s.RenderBar(100, 10)
+	if strings.Contains(bar, "\u2591") {
+		t.Error("RenderBar(100,10) should not contain empty blocks")
+	}
+}
+
+func TestRenderBarOver100(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// pct=150, width=10: should cap at 10 filled blocks, no empty
+	bar := s.RenderBar(150, 10)
+	if strings.Contains(bar, "\u2591") {
+		t.Error("RenderBar(150,10) should cap filled blocks and have no empty blocks")
+	}
+}
+
+func TestVisualPad(t *testing.T) {
+	palette := ui.GetTheme("dark")
+	s := cliout.New(palette)
+
+	// A styled string shorter than targetWidth should get padded
+	styled := s.Label.Render("hi")
+	padded := cliout.VisualPad(styled, 20)
+	// The visible width should be exactly 20
+	if len(padded) <= len(styled) {
+		t.Error("VisualPad should add padding spaces to reach targetWidth")
+	}
+}
+
+func TestVisualPadExactWidth(t *testing.T) {
+	// A plain string already at targetWidth returns unchanged
+	result := cliout.VisualPad("hello", 5)
+	if result != "hello" {
+		t.Errorf("VisualPad(\"hello\", 5) should return \"hello\" unchanged, got %q", result)
+	}
+}
+
+func TestVisualPadPlainString(t *testing.T) {
+	// A plain string shorter than targetWidth gets padded with spaces
+	result := cliout.VisualPad("hi", 5)
+	if result != "hi   " {
+		t.Errorf("VisualPad(\"hi\", 5) should return \"hi   \", got %q", result)
+	}
+}
