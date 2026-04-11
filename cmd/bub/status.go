@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
@@ -74,47 +75,39 @@ func printStatus(cmd *cobra.Command) error {
 
 	barWidth := 12
 	out := cmd.OutOrStdout()
+	s := loadCLIStyles()
 
-	fmt.Fprintf(out, "\n")
-	fmt.Fprintf(out, "  CPU     %s  %6s   | Memory  %s  %6s\n",
-		renderBar(cpuVal, barWidth), util.FastPercent1(cpuVal),
-		renderBar(memVal, barWidth), util.FastPercent1(memVal))
-	fmt.Fprintf(out, "  Disk    %s  %6s   | Temp    %s  %6s\n",
-		renderBar(diskVal, barWidth), util.FastPercent1(diskVal),
-		renderTempBar(tempVal, barWidth), fmt.Sprintf("%.0f°C", tempVal))
-	fmt.Fprintf(out, "  Swap    %s  %6s   | Uptime  %s\n",
-		renderBar(swapVal, barWidth), util.FastPercent1(swapVal),
-		uptime)
+	lipgloss.Fprintf(out, "\n")
+	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s  %s\n",
+		s.Label.Render("CPU"),
+		s.RenderBar(cpuVal, barWidth),
+		s.Value.Render(util.FastPercent1(cpuVal)),
+		s.Label.Render("Memory"),
+		s.RenderBar(memVal, barWidth),
+		s.Value.Render(util.FastPercent1(memVal)))
+	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s  %s\n",
+		s.Label.Render("Disk"),
+		s.RenderBar(diskVal, barWidth),
+		s.Value.Render(util.FastPercent1(diskVal)),
+		s.Label.Render("Temp"),
+		s.RenderBar(tempVal/100.0, barWidth),
+		s.Value.Render(fmt.Sprintf("%.0f°C", tempVal)))
+	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s\n",
+		s.Label.Render("Swap"),
+		s.RenderBar(swapVal, barWidth),
+		s.Value.Render(util.FastPercent1(swapVal)),
+		s.Label.Render("Uptime"),
+		s.Dim.Render(uptime))
 
 	if memTotal > 0 {
-		fmt.Fprintf(out, "\n  Memory: %s / %s\n",
-			util.FastBytes(memInfo.Used), util.FastBytes(memTotal))
+		lipgloss.Fprintf(out, "\n  %s %s / %s\n",
+			s.Label.Render("Memory:"),
+			s.Value.Render(util.FastBytes(memInfo.Used)),
+			s.Value.Render(util.FastBytes(memTotal)))
 	}
-	fmt.Fprintf(out, "\n")
+	lipgloss.Fprintf(out, "\n")
 
 	return nil
-}
-
-func renderBar(pct float64, width int) string {
-	filled := int(pct / 100.0 * float64(width))
-	if filled > width {
-		filled = width
-	}
-	bar := ""
-	for i := 0; i < width; i++ {
-		if i < filled {
-			bar += "█"
-		} else {
-			bar += "░"
-		}
-	}
-	return bar
-}
-
-func renderTempBar(temp float64, width int) string {
-	// Assume 100°C is max
-	pct := temp / 100.0 * 100.0
-	return renderBar(pct, width)
 }
 
 func formatUptime(seconds uint64) string {
