@@ -31,11 +31,21 @@ type CLIStyles struct {
 // New creates a CLIStyles value from the given ThemePalette.
 // All styles are initialized once; no further renderer allocation needed.
 func New(palette ui.ThemePalette) CLIStyles {
-	return CLIStyles{} // stub: tests will fail
-}
+	return CLIStyles{
+		Label:    lipgloss.NewStyle().Foreground(palette.Muted),
+		Value:    lipgloss.NewStyle().Foreground(palette.Text),
+		Bold:     lipgloss.NewStyle().Bold(true).Foreground(palette.Text),
+		OK:       lipgloss.NewStyle().Bold(true).Foreground(palette.Success),
+		Warn:     lipgloss.NewStyle().Bold(true).Foreground(palette.Warning),
+		Critical: lipgloss.NewStyle().Bold(true).Foreground(palette.Alert),
+		Dim:      lipgloss.NewStyle().Faint(true).Foreground(palette.Muted),
+		Header:   lipgloss.NewStyle().Bold(true).Underline(true).Foreground(palette.Primary),
+		Active:   lipgloss.NewStyle().Bold(true).Foreground(palette.Primary),
 
-// BarColor returns a style colored by the percentage threshold.
-// Stub for compilation - will be implemented in helpers.go.
-func (s CLIStyles) BarColor(pct float64) lipgloss.Style {
-	return lipgloss.NewStyle()
+		CheckOK:   lipgloss.NewStyle().Foreground(palette.Success).Render("\u2713"),
+		CheckFail: lipgloss.NewStyle().Foreground(palette.Alert).Render("\u2717"),
+		CheckWarn: lipgloss.NewStyle().Foreground(palette.Warning).Render("\u26A0"),
+
+		palette: palette,
+	}
 }
