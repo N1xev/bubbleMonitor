@@ -7,10 +7,12 @@ import (
 	"os/exec"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/spf13/cobra"
 
+	"github.com/N1xev/bubbleMonitor/internal/cliout"
 	configpkg "github.com/N1xev/bubbleMonitor/internal/config"
 )
 
@@ -27,82 +29,96 @@ func newDoctorCmd() *cobra.Command {
 
 func runDoctor(cmd *cobra.Command) error {
 	out := cmd.OutOrStdout()
+	s := loadCLIStyles()
 	failures := 0
 
-	fmt.Fprintf(out, "\n")
+	lipgloss.Fprintf(out, "\n")
 
 	// Config file
 	configPath, err := configpkg.GetConfigPath()
 	if err != nil {
-		fmt.Fprintf(out, "  ✗ Config path: %v\n", err)
+		lipgloss.Fprintf(out, "  %s Config path: %v\n", s.CheckFail, err)
 		failures++
 	} else {
 		if _, err := os.Stat(configPath); err != nil {
-			fmt.Fprintf(out, "  ⚠ Config file: not found at %s (will be created on first run)\n", configPath)
+			lipgloss.Fprintf(out, "  %s Config file: %s (%s)\n",
+				s.CheckWarn,
+				s.Dim.Render("not found at"),
+				s.Value.Render(configPath))
 		} else {
-			fmt.Fprintf(out, "  ✓ Config file: %s\n", configPath)
+			lipgloss.Fprintf(out, "  %s Config file: %s\n",
+				s.CheckOK,
+				s.Value.Render(configPath))
 		}
 	}
 
 	// gopsutil - CPU metrics
 	if pcts, err := cpu.Percent(0, false); err != nil || len(pcts) == 0 {
-		fmt.Fprintf(out, "  ✗ CPU metrics: unavailable (%v)\n", err)
+		lipgloss.Fprintf(out, "  %s CPU metrics: unavailable (%v)\n", s.CheckFail, err)
 		failures++
 	} else {
-		fmt.Fprintf(out, "  ✓ CPU metrics: available (%.1f%%)\n", pcts[0])
+		lipgloss.Fprintf(out, "  %s CPU metrics: available (%s)\n",
+			s.CheckOK,
+			s.Value.Render(fmt.Sprintf("%.1f%%", pcts[0])))
 	}
 
 	// Host info
 	if hi, err := host.Info(); err != nil {
-		fmt.Fprintf(out, "  ✗ Host info: unavailable (%v)\n", err)
+		lipgloss.Fprintf(out, "  %s Host info: unavailable (%v)\n", s.CheckFail, err)
 		failures++
 	} else {
-		fmt.Fprintf(out, "  ✓ Host info: %s %s\n", hi.OS, hi.PlatformVersion)
+		lipgloss.Fprintf(out, "  %s Host info: %s\n",
+			s.CheckOK,
+			s.Value.Render(fmt.Sprintf("%s %s", hi.OS, hi.PlatformVersion)))
 	}
 
 	// GPU checks
-	checkGPU(out, "NVIDIA", "nvidia-smi")
-	checkGPU(out, "AMD", "rocm-smi")
+	checkGPU(out, s, "NVIDIA", "nvidia-smi")
+	checkGPU(out, s, "AMD", "rocm-smi")
 
 	// SSH binary
 	if path, err := exec.LookPath("ssh"); err != nil {
-		fmt.Fprintf(out, "  ✗ SSH: not found in PATH\n")
+		lipgloss.Fprintf(out, "  %s SSH: not found in PATH\n", s.CheckFail)
 		failures++
 	} else {
-		fmt.Fprintf(out, "  ✓ SSH binary: %s\n", path)
+		lipgloss.Fprintf(out, "  %s SSH binary: %s\n", s.CheckOK, s.Value.Render(path))
 	}
 
 	// Remote hosts connectivity
 	cfg, _ := loadConfigWithOverrides()
 	for _, h := range cfg.RemoteHosts {
-		checkRemoteHost(out, h)
+		checkRemoteHost(out, s, h)
 	}
 
-	fmt.Fprintf(out, "\n")
+	lipgloss.Fprintf(out, "\n")
 	if failures > 0 {
 		os.Exit(1)
 	}
 	return nil
 }
 
-func checkGPU(out io.Writer, name, cmd string) {
+func checkGPU(out io.Writer, s cliout.CLIStyles, name, cmd string) {
 	if path, err := exec.LookPath(cmd); err != nil {
-		fmt.Fprintf(out, "  ⚠ %s GPU: %s not found\n", name, cmd)
+		lipgloss.Fprintf(out, "  %s %s GPU: %s not found\n",
+			s.CheckWarn, s.Dim.Render(name+" not available"), s.Value.Render(cmd))
 	} else {
-		fmt.Fprintf(out, "  ✓ %s GPU: %s detected\n", name, path)
+		lipgloss.Fprintf(out, "  %s %s GPU: %s detected\n",
+			s.CheckOK, name, s.Value.Render(path))
 	}
 }
 
-func checkRemoteHost(out io.Writer, host configpkg.RemoteHostConfig) {
+func checkRemoteHost(out io.Writer, s cliout.CLIStyles, host configpkg.RemoteHostConfig) {
 	args := []string{"-o", "ConnectTimeout=5", "-o", "BatchMode=yes", host.Host, "echo", "ok"}
 	start := time.Now()
-	cmd := exec.Command("ssh", args...)
-	err := cmd.Run()
+	c := exec.Command("ssh", args...)
+	err := c.Run()
 	elapsed := time.Since(start).Truncate(time.Millisecond)
 
 	if err != nil {
-		fmt.Fprintf(out, "  ✗ Remote %q (%s): unreachable (%v)\n", host.Name, host.Host, err)
+		lipgloss.Fprintf(out, "  %s Remote %q (%s): unreachable (%v)\n",
+			s.CheckFail, host.Name, host.Host, err)
 	} else {
-		fmt.Fprintf(out, "  ✓ Remote %q (%s): reachable (%v)\n", host.Name, host.Host, elapsed)
+		lipgloss.Fprintf(out, "  %s Remote %q (%s): reachable (%v)\n",
+			s.CheckOK, host.Name, host.Host, elapsed)
 	}
 }
