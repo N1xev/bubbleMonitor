@@ -31,10 +31,8 @@ type CLIStyles struct {
 // New creates a CLIStyles value from the given ThemePalette.
 // All styles are initialized once; no further renderer allocation needed.
 func New(palette ui.ThemePalette) CLIStyles {
-	badgeBg := palette.Primary
-
 	return CLIStyles{
-		Label:    lipgloss.NewStyle().Foreground(palette.Background).Background(badgeBg),
+		Label:    lipgloss.NewStyle().Foreground(palette.Text).Background(palette.Border),
 		Value:    lipgloss.NewStyle().Foreground(palette.Text),
 		Bold:     lipgloss.NewStyle().Bold(true).Foreground(palette.Text),
 		OK:       lipgloss.NewStyle().Bold(true).Foreground(palette.Success),
@@ -44,9 +42,9 @@ func New(palette ui.ThemePalette) CLIStyles {
 		Header:   lipgloss.NewStyle().Bold(true).Underline(true).Foreground(palette.Primary),
 		Active:   lipgloss.NewStyle().Bold(true).Foreground(palette.Primary),
 
-		CheckOK:   lipgloss.NewStyle().Foreground(palette.Success).Bold(true).Render("\u2713"),
-		CheckFail: lipgloss.NewStyle().Foreground(palette.Alert).Bold(true).Render("\u2717"),
-		CheckWarn: lipgloss.NewStyle().Foreground(palette.Warning).Bold(true).Render("\u26A0"),
+		CheckOK:   lipgloss.NewStyle().Foreground(palette.Success).Background(palette.Border).Bold(true).Render("✓"),
+		CheckFail: lipgloss.NewStyle().Foreground(palette.Alert).Background(palette.Border).Bold(true).Render("✗"),
+		CheckWarn: lipgloss.NewStyle().Foreground(palette.Warning).Background(palette.Border).Bold(true).Render("⚠"),
 
 		palette: palette,
 	}

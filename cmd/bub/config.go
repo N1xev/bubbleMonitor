@@ -71,7 +71,7 @@ func newConfigSetCmd() *cobra.Command {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
 			s := loadCLIStyles()
-			lipgloss.Fprintf(cmd.OutOrStdout(), "%s %s = %s\n", s.OK.Render("Set"), s.Label.Render(key), s.Value.Render(value))
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s %s = %s\n", s.Label.Render("Set"), s.Label.Render(key), s.Value.Render(value))
 			return nil
 		},
 	}
@@ -88,7 +88,7 @@ func newConfigResetCmd() *cobra.Command {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
 			s := loadCLIStyles()
-			lipgloss.Fprintf(cmd.OutOrStdout(), "%s Configuration reset to defaults.\n", s.OK.Render("Reset"))
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s Configuration reset to defaults.\n", s.Label.Render("Reset"))
 			return nil
 		},
 	}
@@ -105,7 +105,7 @@ func newConfigPathCmd() *cobra.Command {
 				return err
 			}
 			s := loadCLIStyles()
-			lipgloss.Fprintf(cmd.OutOrStdout(), "%s\n", s.Value.Render(path))
+			lipgloss.Fprintf(cmd.OutOrStdout(), "%s\n", s.Label.Render(path))
 			return nil
 		},
 	}

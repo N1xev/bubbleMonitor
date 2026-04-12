@@ -37,38 +37,38 @@ func runDoctor(cmd *cobra.Command) error {
 	// Config file
 	configPath, err := configpkg.GetConfigPath()
 	if err != nil {
-		lipgloss.Fprintf(out, "  %s %v\n", s.Label.Render(s.CheckFail+" Config path:"), err)
+		lipgloss.Fprintf(out, "  %s %v\n", s.CheckFail+s.Label.Render(" Config path:"), err)
 		failures++
 	} else {
 		if _, err := os.Stat(configPath); err != nil {
 			lipgloss.Fprintf(out, "  %s %s (%s)\n",
-				s.Label.Render(s.CheckWarn+" Config file:"),
+				s.CheckWarn+s.Label.Render(" Config file:"),
 				s.Dim.Render("not found at"),
 				s.Value.Render(configPath))
 		} else {
 			lipgloss.Fprintf(out, "  %s %s\n",
-				s.Label.Render(s.CheckOK+" Config file:"),
+				s.CheckOK+s.Label.Render(" Config file:"),
 				s.Value.Render(configPath))
 		}
 	}
 
 	// gopsutil - CPU metrics
 	if pcts, err := cpu.Percent(0, false); err != nil || len(pcts) == 0 {
-		lipgloss.Fprintf(out, "  %s unavailable (%v)\n", s.Label.Render(s.CheckFail+" CPU metrics:"), err)
+		lipgloss.Fprintf(out, "  %s unavailable (%v)\n", s.CheckFail+s.Label.Render(" CPU metrics:"), err)
 		failures++
 	} else {
 		lipgloss.Fprintf(out, "  %s available (%s)\n",
-			s.Label.Render(s.CheckOK+" CPU metrics:"),
+			s.CheckOK+s.Label.Render(" CPU metrics:"),
 			s.Value.Render(fmt.Sprintf("%.1f%%", pcts[0])))
 	}
 
 	// Host info
 	if hi, err := host.Info(); err != nil {
-		lipgloss.Fprintf(out, "  %s unavailable (%v)\n", s.Label.Render(s.CheckFail+" Host info:"), err)
+		lipgloss.Fprintf(out, "  %s unavailable (%v)\n", s.CheckFail+s.Label.Render(" Host info:"), err)
 		failures++
 	} else {
 		lipgloss.Fprintf(out, "  %s %s\n",
-			s.Label.Render(s.CheckOK+" Host info:"),
+			s.CheckOK+s.Label.Render(" Host info:"),
 			s.Value.Render(fmt.Sprintf("%s %s", hi.OS, hi.PlatformVersion)))
 	}
 
@@ -78,10 +78,10 @@ func runDoctor(cmd *cobra.Command) error {
 
 	// SSH binary
 	if path, err := exec.LookPath("ssh"); err != nil {
-		lipgloss.Fprintf(out, "  %s not found in PATH\n", s.Label.Render(s.CheckFail+" SSH:"))
+		lipgloss.Fprintf(out, "  %s not found in PATH\n", s.CheckFail+s.Label.Render(" SSH:"))
 		failures++
 	} else {
-		lipgloss.Fprintf(out, "  %s %s\n", s.Label.Render(s.CheckOK+" SSH binary:"), s.Value.Render(path))
+		lipgloss.Fprintf(out, "  %s %s\n", s.CheckOK+s.Label.Render(" SSH binary:"), s.Value.Render(path))
 	}
 
 	// Remote hosts connectivity
@@ -100,10 +100,10 @@ func runDoctor(cmd *cobra.Command) error {
 func checkGPU(out io.Writer, s cliout.CLIStyles, name, cmd string) {
 	if path, err := exec.LookPath(cmd); err != nil {
 		lipgloss.Fprintf(out, "  %s %s not found\n",
-			s.Label.Render(s.CheckWarn+" "+name+" GPU:"), s.Value.Render(cmd))
+			s.CheckWarn+s.Label.Render(" "+name+" GPU:"), s.Value.Render(cmd))
 	} else {
 		lipgloss.Fprintf(out, "  %s %s detected\n",
-			s.Label.Render(s.CheckOK+" "+name+" GPU:"), s.Value.Render(path))
+			s.CheckOK+s.Label.Render(" "+name+" GPU:"), s.Value.Render(path))
 	}
 }
 
@@ -116,9 +116,9 @@ func checkRemoteHost(out io.Writer, s cliout.CLIStyles, host configpkg.RemoteHos
 
 	if err != nil {
 		lipgloss.Fprintf(out, "  %s unreachable (%v)\n",
-			s.Label.Render(s.CheckFail+fmt.Sprintf(" Remote %q (%s):", host.Name, host.Host)), err)
+			s.CheckFail+s.Label.Render(fmt.Sprintf(" Remote %q (%s):", host.Name, host.Host)), err)
 	} else {
 		lipgloss.Fprintf(out, "  %s reachable (%v)\n",
-			s.Label.Render(s.CheckOK+fmt.Sprintf(" Remote %q (%s):", host.Name, host.Host)), elapsed)
+			s.CheckOK+s.Label.Render(fmt.Sprintf(" Remote %q (%s):", host.Name, host.Host)), elapsed)
 	}
 }
