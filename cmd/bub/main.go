@@ -17,6 +17,13 @@ func main() {
 	// 	log.Println(http.ListenAndServe("localhost:8080", nil))
 	// }()
 
+	if len(os.Args) > 1 {
+		if err := Execute(buildVersion, buildCommit, buildDate); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+
 	p := tea.NewProgram(app.InitialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
