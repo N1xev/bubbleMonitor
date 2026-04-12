@@ -30,9 +30,9 @@ builds:
         - chmod +x dist/bub_{{ .Os }}_{{ .Arch }}
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -X main.buildVersion={{.Version}}
+      - -X main.buildCommit={{.Commit}}
+      - -X main.buildDate={{.Date}}
 
 archives:
   - id: binaries
