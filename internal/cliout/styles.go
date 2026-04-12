@@ -31,7 +31,7 @@ type CLIStyles struct {
 // New creates a CLIStyles value from the given ThemePalette.
 // All styles are initialized once; no further renderer allocation needed.
 func New(palette ui.ThemePalette) CLIStyles {
-	badgeBg := palette.Secondary
+	badgeBg := palette.Primary
 
 	return CLIStyles{
 		Label:    lipgloss.NewStyle().Foreground(palette.Text).Background(badgeBg),

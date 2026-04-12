@@ -11,6 +11,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/spf13/cobra"
 
+	"github.com/N1xev/bubbleMonitor/internal/cliout"
 	"github.com/N1xev/bubbleMonitor/internal/util"
 )
 
@@ -79,24 +80,24 @@ func printStatus(cmd *cobra.Command) error {
 
 	lipgloss.Fprintf(out, "\n")
 	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s  %s\n",
-		s.Label.Render("CPU   "),
+		cliout.VisualPad(s.Label.Render("CPU"), 6),
 		s.RenderBar(cpuVal, barWidth),
 		s.Value.Render(util.FastPercent1(cpuVal)),
-		s.Label.Render("Memory"),
+		cliout.VisualPad(s.Label.Render("Memory"), 6),
 		s.RenderBar(memVal, barWidth),
 		s.Value.Render(util.FastPercent1(memVal)))
 	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s  %s\n",
-		s.Label.Render("Disk  "),
+		cliout.VisualPad(s.Label.Render("Disk"), 6),
 		s.RenderBar(diskVal, barWidth),
 		s.Value.Render(util.FastPercent1(diskVal)),
-		s.Label.Render("Temp  "),
+		cliout.VisualPad(s.Label.Render("Temp"), 6),
 		s.RenderBar(tempVal/100.0, barWidth),
 		s.Value.Render(fmt.Sprintf("%.0f°C", tempVal)))
 	lipgloss.Fprintf(out, "  %s  %s  %s   | %s  %s\n",
-		s.Label.Render("Swap  "),
+		cliout.VisualPad(s.Label.Render("Swap"), 6),
 		s.RenderBar(swapVal, barWidth),
 		s.Value.Render(util.FastPercent1(swapVal)),
-		s.Label.Render("Uptime"),
+		cliout.VisualPad(s.Label.Render("Uptime"), 6),
 		s.Dim.Render(uptime))
 
 	if memTotal > 0 {
