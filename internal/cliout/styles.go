@@ -44,9 +44,9 @@ func New(palette ui.ThemePalette) CLIStyles {
 		Header:   lipgloss.NewStyle().Bold(true).Underline(true).Foreground(palette.Primary),
 		Active:   lipgloss.NewStyle().Bold(true).Foreground(palette.Primary),
 
-		CheckOK:   lipgloss.NewStyle().Foreground(palette.Success).Background(badgeBg).Bold(true).Render("\u2713"),
-		CheckFail: lipgloss.NewStyle().Foreground(palette.Alert).Background(badgeBg).Bold(true).Render("\u2717"),
-		CheckWarn: lipgloss.NewStyle().Foreground(palette.Warning).Background(badgeBg).Bold(true).Render("\u26A0"),
+		CheckOK:   lipgloss.NewStyle().Foreground(palette.Success).Bold(true).Render("\u2713"),
+		CheckFail: lipgloss.NewStyle().Foreground(palette.Alert).Bold(true).Render("\u2717"),
+		CheckWarn: lipgloss.NewStyle().Foreground(palette.Warning).Bold(true).Render("\u26A0"),
 
 		palette: palette,
 	}

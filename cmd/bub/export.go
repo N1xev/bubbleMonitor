@@ -143,7 +143,7 @@ func exportJSON(s metricsSnapshot) error {
 			return err
 		}
 		s := loadCLIStyles()
-		lipgloss.Fprintf(os.Stdout, "%s Exported snapshot to %s\n", s.CheckOK, s.Value.Render(exportOutput))
+		lipgloss.Fprintf(os.Stdout, "%s %s\n", s.Label.Render(s.CheckOK+" Exported snapshot to"), s.Value.Render(exportOutput))
 		return nil
 	}
 	fmt.Println(string(data))
@@ -163,7 +163,7 @@ func exportCSV(s metricsSnapshot) error {
 			return err
 		}
 		s := loadCLIStyles()
-		lipgloss.Fprintf(os.Stdout, "%s Exported snapshot to %s\n", s.CheckOK, s.Value.Render(exportOutput))
+		lipgloss.Fprintf(os.Stdout, "%s %s\n", s.Label.Render(s.CheckOK+" Exported snapshot to"), s.Value.Render(exportOutput))
 		return nil
 	}
 	fmt.Print(csv)
