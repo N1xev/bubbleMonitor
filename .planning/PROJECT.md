@@ -20,13 +20,13 @@ Every CLI command output respects the user's active theme — labels, values, he
 - ✓ Cobra CLI with subcommands (status, health, doctor, top, sysinfo, themes, config, export, version, remote) — existing
 - ✓ loadConfigWithOverrides() available in all cmd/bub files — existing
 - ✓ All output uses fmt.Fprintf(cmd.OutOrStdout(), ...) pattern — existing
+- ✓ CLIStyles struct mapping ThemePalette to styled output primitives — Phase 1
+- ✓ BarColor(pct) and ScoreColor(score) threshold helpers — Phase 1
+- ✓ loadCLIStyles() bridge function in cmd/bub/ — Phase 1
+- ✓ cliout package at internal/cliout/ with VisualPad for ANSI-aware padding — Phase 1
 
 ### Active
 
-- [ ] CLIStyles struct mapping ThemePalette to styled output primitives (Label, Value, Bold, OK, Warn, Critical, CheckOK/CheckFail/CheckWarn, Dim, Header, Active)
-- [ ] BarColor(pct) helper for progress bars (<60 green, <80 yellow, >=80 red)
-- [ ] ScoreColor(score) helper for health scores (>=70 green, >=50 yellow, <50 red)
-- [ ] loadCLIStyles() helper in cmd/bub to bridge config → theme → CLIStyles
 - [ ] status.go output styled: colored bars, labeled values, dim uptime
 - [ ] health.go output styled: status-dependent coloring, score coloring
 - [ ] doctor.go output styled: themed check/fail/warn symbols, styled paths
@@ -65,9 +65,9 @@ Every CLI command output respects the user's active theme — labels, values, he
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| New package `cliout` in cmd/bub/ | Keeps CLI styling separate from TUI styling, avoids circular imports | — Pending |
-| CLIStyles as value struct | Stateless after creation, safe to pass around | — Pending |
-| Create lipgloss renderer once in New() | Avoid per-call overhead from renderer creation | — Pending |
+| New package `cliout` at internal/cliout/ | Follows internal/ convention, avoids circular deps | ✓ Good |
+| CLIStyles as value struct | Stateless after creation, safe to pass around | ✓ Good |
+| No renderer needed (lipgloss v2 removed NewRenderer) | Styles are pure value types via lipgloss.NewStyle() | ✓ Good |
 | Style before padding for tabwriter | lipgloss ANSI codes break width calculations | — Pending |
 
 ## Evolution
@@ -88,4 +88,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after initialization*
+*Last updated: 2026-04-11 after Phase 1 completion*

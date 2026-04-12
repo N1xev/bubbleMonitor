@@ -38,7 +38,7 @@ go install github.com/N1xev/bubbleMonitor/cmd/bub@latest
 ```bash
 curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_linux_amd64 -o bub
 chmod +x bub
-sudo mv bub /usr/local/bin/
+sudo mv bub /usr/bin/
 ```
 
 ### macOS (Intel)
@@ -46,7 +46,7 @@ sudo mv bub /usr/local/bin/
 ```bash
 curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_darwin_amd64 -o bub
 chmod +x bub
-sudo mv bub /usr/local/bin/
+sudo mv bub /usr/bin/
 ```
 
 ### macOS (Apple Silicon)
@@ -54,7 +54,7 @@ sudo mv bub /usr/local/bin/
 ```bash
 curl -L https://github.com/N1xev/bubbleMonitor/releases/latest/download/bub_darwin_arm64 -o bub
 chmod +x bub
-sudo mv bub /usr/local/bin/
+sudo mv bub /usr/bin/
 ```
 
 ### Windows
