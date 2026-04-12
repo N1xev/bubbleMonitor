@@ -34,7 +34,7 @@ func New(palette ui.ThemePalette) CLIStyles {
 	badgeBg := palette.Primary
 
 	return CLIStyles{
-		Label:    lipgloss.NewStyle().Foreground(palette.Text).Background(badgeBg),
+		Label:    lipgloss.NewStyle().Foreground(palette.Background).Background(badgeBg),
 		Value:    lipgloss.NewStyle().Foreground(palette.Text),
 		Bold:     lipgloss.NewStyle().Bold(true).Foreground(palette.Text),
 		OK:       lipgloss.NewStyle().Bold(true).Foreground(palette.Success),
