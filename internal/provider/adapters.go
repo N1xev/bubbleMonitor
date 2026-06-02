@@ -83,6 +83,16 @@ func (a *SystemAdapter) SystemLogsCmd() tea.Cmd {
 	return system.SystemLogsCmd()
 }
 
+// ContainerCmd returns a command that fetches docker/k8s container metrics.
+func (a *SystemAdapter) ContainerCmd() tea.Cmd {
+	return system.ContainerCmd()
+}
+
+// VmCmd returns a command that fetches VM/hypervisor information.
+func (a *SystemAdapter) VmCmd() tea.Cmd {
+	return system.VmCmd()
+}
+
 // HasNvidiaGPU returns true if an NVIDIA GPU is detected.
 func (a *SystemAdapter) HasNvidiaGPU() bool {
 	caps := system.DetectHardware()
@@ -93,6 +103,12 @@ func (a *SystemAdapter) HasNvidiaGPU() bool {
 func (a *SystemAdapter) HasAmdGPU() bool {
 	caps := system.DetectHardware()
 	return caps.HasAmdGPU
+}
+
+// HasIntelGPU returns true if an Intel GPU is detected.
+func (a *SystemAdapter) HasIntelGPU() bool {
+	caps := system.DetectHardware()
+	return caps.HasIntelGPU
 }
 
 // HasBattery returns true if a battery is detected.
@@ -123,6 +139,18 @@ func (a *SystemAdapter) HasServices() bool {
 func (a *SystemAdapter) HasTempSensors() bool {
 	caps := system.DetectHardware()
 	return caps.HasTempSensors
+}
+
+// HasDocker returns true if docker is available.
+func (a *SystemAdapter) HasDocker() bool {
+	caps := system.DetectHardware()
+	return caps.HasDocker
+}
+
+// HasKubernetes returns true if kubernetes is available.
+func (a *SystemAdapter) HasKubernetes() bool {
+	caps := system.DetectHardware()
+	return caps.HasKubernetes
 }
 
 // DetectHardware runs hardware capability detection.

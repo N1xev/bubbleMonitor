@@ -49,11 +49,20 @@ type SystemProvider interface {
 	// SystemLogsCmd returns a command that fetches system logs.
 	SystemLogsCmd() tea.Cmd
 
+	// ContainerCmd returns a command that fetches docker/k8s container metrics.
+	ContainerCmd() tea.Cmd
+
+	// VmCmd returns a command that fetches VM/hypervisor information.
+	VmCmd() tea.Cmd
+
 	// HasNvidiaGPU returns true if an NVIDIA GPU is detected.
 	HasNvidiaGPU() bool
 
 	// HasAmdGPU returns true if an AMD GPU is detected.
 	HasAmdGPU() bool
+
+	// HasIntelGPU returns true if an Intel GPU is detected.
+	HasIntelGPU() bool
 
 	// HasBattery returns true if a battery is detected.
 	HasBattery() bool
@@ -69,6 +78,12 @@ type SystemProvider interface {
 
 	// HasTempSensors returns true if temperature sensors are available.
 	HasTempSensors() bool
+
+	// HasDocker returns true if docker is available.
+	HasDocker() bool
+
+	// HasKubernetes returns true if kubernetes is available.
+	HasKubernetes() bool
 
 	// DetectHardware runs hardware capability detection.
 	DetectHardware()

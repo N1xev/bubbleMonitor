@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	containerChecked   bool
 	dockerAvailable    bool
 	k8sAvailable       bool
 	containerCheckOnce sync.Once
@@ -30,12 +29,8 @@ func init() {
 }
 
 func checkContainerAvailability() {
-	if containerChecked {
-		return
-	}
 	dockerAvailable = isDockerAvailable()
 	k8sAvailable = isKubernetesAvailable()
-	containerChecked = true
 }
 
 func isDockerAvailable() bool {
@@ -71,26 +66,41 @@ func HasKubernetes() bool {
 
 func ContainerCmd() tea.Cmd {
 	return func() tea.Msg {
-		var containers []data.ContainerInfo
-		var pods []data.K8sPodInfo
-		var err error
+		var (
+			containers []data.ContainerInfo
+			pods       []data.K8sPodInfo
+			dockerErr  error
+			k8sErr     error
+		)
 
 		if dockerAvailable {
-			containers, err = fetchDockerContainers()
-			if err != nil {
+			containers, dockerErr = fetchDockerContainers()
+			if dockerErr != nil {
 				containers = nil
 			}
 		}
 
 		if k8sAvailable {
-			pods, err = fetchKubernetesPods()
-			if err != nil {
+			pods, k8sErr = fetchKubernetesPods()
+			if k8sErr != nil {
 				pods = nil
 			}
 		}
 
+		// Aggregate errors so the user can see both docker and k8s failures,
+		// not just whichever the k8s call overwrote.
+		var combinedErr error
+		switch {
+		case dockerErr != nil && k8sErr != nil:
+			combinedErr = fmt.Errorf("docker: %v; k8s: %v", dockerErr, k8sErr)
+		case dockerErr != nil:
+			combinedErr = dockerErr
+		case k8sErr != nil:
+			combinedErr = k8sErr
+		}
+
 		return msg.ContainerInfoMsg{
-			Err:           err,
+			Err:           combinedErr,
 			Containers:    containers,
 			Pods:          pods,
 			HasDocker:     dockerAvailable,
@@ -99,15 +109,9 @@ func ContainerCmd() tea.Cmd {
 	}
 }
 
-type dockerStats struct {
-	Read     string         `json:"read"`
-	CPU      dockerCPUStats `json:"cpu_stats"`
-	PreCPU   dockerCPUStats `json:"precpu_stats"`
-	Memory   dockerMemStats `json:"memory_stats"`
-	Networks map[string]struct {
-		RxBytes uint64 `json:"rx_bytes"`
-		TxBytes uint64 `json:"tx_bytes"`
-	} `json:"networks"`
+type dockerNetStats struct {
+	RxBytes uint64 `json:"rx_bytes"`
+	TxBytes uint64 `json:"tx_bytes"`
 }
 
 type dockerCPUStats struct {
@@ -123,11 +127,82 @@ type dockerMemStats struct {
 	Limit uint64 `json:"limit"`
 }
 
-func fetchDockerContainers() ([]data.ContainerInfo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+// dockerStats mirrors the subset of the Docker stats API that we consume.
+// Matches the JSON shape returned by "docker stats --no-stream --format
+// '{{json .}}'" when --filter id= is used.
+type dockerStats struct {
+	Read     string                  `json:"read"`
+	CPU      dockerCPUStats          `json:"cpu_stats"`
+	PreCPU   dockerCPUStats          `json:"precpu_stats"`
+	Memory   dockerMemStats          `json:"memory_stats"`
+	Networks map[string]dockerNetStats `json:"networks"`
+}
 
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.State}}\t{{.CreatedAt}}")
+func calculateCPUPercent(stats *dockerStats) float64 {
+	cpuDelta := float64(stats.CPU.CPUUsage.TotalUsage) - float64(stats.PreCPU.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPU.SystemCPUUsage) - float64(stats.PreCPU.SystemCPUUsage)
+
+	if systemDelta > 0 && cpuDelta > 0 {
+		onlineCPUs := stats.CPU.OnlineCPUs
+		if onlineCPUs == 0 {
+			onlineCPUs = 1
+		}
+		return (cpuDelta / systemDelta) * onlineCPUs * 100
+	}
+
+	return 0
+}
+
+// parseMemValue converts a memory string like "12.5MiB" or "1.0GB" to bytes.
+// Distinguishes binary (KiB/MiB/GiB) and decimal (KB/MB/GB) suffixes so
+// Docker's MiB output and other tools' MB output don't collide.
+func parseMemValue(s string) (uint64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty memory value")
+	}
+
+	var multiplier uint64 = 1
+	type unit struct {
+		binarySuffix   string
+		decimalSuffix  string
+		binaryMult     uint64
+		decimalMult    uint64
+	}
+	// Order matters: longest binary suffixes first so we don't mis-strip
+	// "MIB" as "MB".
+	units := []unit{
+		{"GIB", "GB", 1024 * 1024 * 1024, 1000 * 1000 * 1000},
+		{"MIB", "MB", 1024 * 1024, 1000 * 1000},
+		{"KIB", "KB", 1024, 1000},
+		{"B", "B", 1, 1},
+	}
+	for _, u := range units {
+		if strings.HasSuffix(s, u.binarySuffix) {
+			s = strings.TrimSuffix(s, u.binarySuffix)
+			multiplier = u.binaryMult
+			break
+		}
+		if strings.HasSuffix(s, u.decimalSuffix) && !strings.HasSuffix(s, "I"+u.decimalSuffix) {
+			s = strings.TrimSuffix(s, u.decimalSuffix)
+			multiplier = u.decimalMult
+			break
+		}
+	}
+
+	s = strings.TrimSpace(s)
+	num, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(num * float64(multiplier)), nil
+}
+
+func fetchDockerContainers() ([]data.ContainerInfo, error) {
+	listCtx, listCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer listCancel()
+
+	cmd := exec.CommandContext(listCtx, "docker", "ps", "-a", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.State}}\t{{.CreatedAt}}")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -135,6 +210,17 @@ func fetchDockerContainers() ([]data.ContainerInfo, error) {
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	result := make([]data.ContainerInfo, 0, len(lines))
+
+	// Pre-build the container list synchronously (fast); then fan out stats
+	// fetches in parallel so a single slow container doesn't blow the
+	// 10-second overall budget for the whole list.
+	type statsResult struct {
+		id    string
+		stats *dockerStats
+		err   error
+	}
+	statsCh := make(chan statsResult, len(lines))
+	pending := 0
 
 	for _, line := range lines {
 		if line == "" {
@@ -156,149 +242,85 @@ func fetchDockerContainers() ([]data.ContainerInfo, error) {
 			Type:    "docker",
 		}
 
-		stats, err := fetchDockerContainerStats(ctx, ci.ID)
-		if err == nil && stats != nil {
-			ci.CPUPercent = calculateCPUPercent(stats)
-			ci.MemUsage = stats.Memory.Usage
-			ci.MemLimit = stats.Memory.Limit
-			if stats.Memory.Limit > 0 {
-				ci.MemPct = float64(stats.Memory.Usage) / float64(stats.Memory.Limit) * 100
-			}
-			for _, netStats := range stats.Networks {
-				ci.NetRx += netStats.RxBytes
-				ci.NetTx += netStats.TxBytes
-			}
-		}
+		// Per-container ctx: a 5s deadline that the parent list deadline
+		// also bounds. We snapshot the ID so the goroutine closes over
+		// the right value even though the loop variable is reused.
+		id := ci.ID
+		pending++
+		go func() {
+			statsCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			s, err := fetchDockerContainerStats(statsCtx, id)
+			statsCh <- statsResult{id: id, stats: s, err: err}
+		}()
 
 		result = append(result, ci)
+	}
+
+	// Drain stats channel.
+	statsByID := make(map[string]*dockerStats, pending)
+	for range pending {
+		r := <-statsCh
+		if r.err == nil && r.stats != nil {
+			statsByID[r.id] = r.stats
+		}
+	}
+
+	for i := range result {
+		stats, ok := statsByID[result[i].ID]
+		if !ok {
+			continue
+		}
+		result[i].CPUPercent = calculateCPUPercent(stats)
+		result[i].MemUsage = stats.Memory.Usage
+		result[i].MemLimit = stats.Memory.Limit
+		if stats.Memory.Limit > 0 {
+			result[i].MemPct = float64(stats.Memory.Usage) / float64(stats.Memory.Limit) * 100
+		}
+		// Sum across all network interfaces; do NOT collapse them into a
+		// single fake "eth0" key. Multi-NIC containers retain per-NIC
+		// accuracy in the underlying stats even if we only expose the
+		// aggregate to the UI.
+		for _, netStats := range stats.Networks {
+			result[i].NetRx += netStats.RxBytes
+			result[i].NetTx += netStats.TxBytes
+		}
 	}
 
 	return result, nil
 }
 
+// fetchDockerContainerStats invokes "docker stats --no-stream" filtered to
+// the requested container. It is CPU-correct: it parses both cpu_stats and
+// precpu_stats from the Docker API JSON so calculateCPUPercent has a real
+// delta. The previous implementation piped the container ID to stdin (which
+// docker stats ignores) and stuffed a fake single-sample into the struct.
 func fetchDockerContainerStats(ctx context.Context, containerID string) (*dockerStats, error) {
-	cmd := exec.CommandContext(ctx, "docker", "stats", "--no-stream", "--format", "{{json .}}")
-	cmd.Stdin = strings.NewReader(containerID + "\n")
+	args := []string{"stats", "--no-stream", "--format", "{{json .}}", "--filter", "id=" + containerID}
+	cmd := exec.CommandContext(ctx, "docker", args...)
 
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		if stderr.Len() > 0 {
+			return nil, fmt.Errorf("docker stats failed: %w: %s", err, stderr.String())
+		}
 		return nil, err
 	}
 
 	output := strings.TrimSpace(stdout.String())
 	if output == "" {
-		return nil, fmt.Errorf("empty stats output")
-	}
-
-	var rawStats struct {
-		CPUPerc  string `json:"CPUPerc"`
-		MemUsage string `json:"MemUsage"`
-		MemPerc  string `json:"MemPerc"`
-		NetRx    string `json:"NetRx"`
-		NetTx    string `json:"NetTx"`
-	}
-
-	if err := json.Unmarshal([]byte(output), &rawStats); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("empty stats output for container %s", containerID)
 	}
 
 	stats := &dockerStats{}
-
-	if cpu, err := strconv.ParseFloat(strings.TrimSuffix(rawStats.CPUPerc, "%"), 64); err == nil {
-		stats.CPU.OnlineCPUs = 1
-		stats.CPU.CPUUsage.TotalUsage = uint64(cpu * 1000000)
-	}
-
-	if memParts := strings.Split(rawStats.MemUsage, "/"); len(memParts) == 2 {
-		if memUsage, err := parseMemValue(memParts[0]); err == nil {
-			stats.Memory.Usage = memUsage
-		}
-		if memLimit, err := parseMemValue(memParts[1]); err == nil {
-			stats.Memory.Limit = memLimit
-		}
-	}
-
-	stats.Networks = make(map[string]struct {
-		RxBytes uint64 `json:"rx_bytes"`
-		TxBytes uint64 `json:"tx_bytes"`
-	})
-
-	if netRx, err := parseMemValue(rawStats.NetRx); err == nil {
-		if stats.Networks == nil {
-			stats.Networks = make(map[string]struct {
-				RxBytes uint64 `json:"rx_bytes"`
-				TxBytes uint64 `json:"tx_bytes"`
-			})
-		}
-		stats.Networks["eth0"] = struct {
-			RxBytes uint64 `json:"rx_bytes"`
-			TxBytes uint64 `json:"tx_bytes"`
-		}{RxBytes: netRx}
-	}
-
-	if netTx, err := parseMemValue(rawStats.NetTx); err == nil {
-		if stats.Networks == nil {
-			stats.Networks = make(map[string]struct {
-				RxBytes uint64 `json:"rx_bytes"`
-				TxBytes uint64 `json:"tx_bytes"`
-			})
-		}
-		if eth0, ok := stats.Networks["eth0"]; ok {
-			eth0.TxBytes = netTx
-			stats.Networks["eth0"] = eth0
-		}
+	if err := json.Unmarshal([]byte(output), stats); err != nil {
+		return nil, fmt.Errorf("parsing docker stats: %w", err)
 	}
 
 	return stats, nil
-}
-
-func parseMemValue(s string) (uint64, error) {
-	s = strings.TrimSpace(s)
-	s = strings.ToUpper(s)
-
-	multiplier := uint64(1)
-
-	if strings.HasSuffix(s, "GIB") || strings.HasSuffix(s, "GB") {
-		s = strings.TrimSuffix(s, "GIB")
-		s = strings.TrimSuffix(s, "GB")
-		multiplier = 1024 * 1024 * 1024
-	} else if strings.HasSuffix(s, "MIB") || strings.HasSuffix(s, "MB") {
-		s = strings.TrimSuffix(s, "MIB")
-		s = strings.TrimSuffix(s, "MB")
-		multiplier = 1024 * 1024
-	} else if strings.HasSuffix(s, "KIB") || strings.HasSuffix(s, "KB") {
-		s = strings.TrimSuffix(s, "KIB")
-		s = strings.TrimSuffix(s, "KB")
-		multiplier = 1024
-	} else if strings.HasSuffix(s, "B") {
-		s = strings.TrimSuffix(s, "B")
-	}
-
-	s = strings.TrimSpace(s)
-	num, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return uint64(num * float64(multiplier)), nil
-}
-
-func calculateCPUPercent(stats *dockerStats) float64 {
-	cpuDelta := float64(stats.CPU.CPUUsage.TotalUsage) - float64(stats.PreCPU.CPUUsage.TotalUsage)
-	systemDelta := float64(stats.CPU.SystemCPUUsage) - float64(stats.PreCPU.SystemCPUUsage)
-
-	if systemDelta > 0 && cpuDelta > 0 {
-		onlineCPUs := stats.CPU.OnlineCPUs
-		if onlineCPUs == 0 {
-			onlineCPUs = 1
-		}
-		return (cpuDelta / systemDelta) * onlineCPUs * 100
-	}
-
-	return 0
 }
 
 func fetchKubernetesPods() ([]data.K8sPodInfo, error) {

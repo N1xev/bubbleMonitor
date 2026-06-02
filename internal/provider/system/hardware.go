@@ -162,45 +162,46 @@ func fetchWindowsGpus() []data.GpuInfo {
 func fetchLinuxGpus() []data.GpuInfo {
 	var gpuList []data.GpuInfo
 	seen := make(map[string]bool)
+	nvidiaSeen := false
+	amdSeen := false
 
 	// Try NVML first (faster), fallback to nvidia-smi if needed
 	if nvmlInitialized {
 		nvidiaGpus := fetchNvidiaGpus()
 		gpuList = append(gpuList, nvidiaGpus...)
+		nvidiaSeen = len(nvidiaGpus) > 0
 		for _, g := range nvidiaGpus {
 			seen[g.Slot] = true
-			seen["nvidia-"+g.Vendor] = true // Mark NVIDIA as seen by vendor too
 		}
 	}
 
 	// Fallback to nvidia-smi if NVML returned nothing
-	if len(gpuList) == 0 {
+	if !nvidiaSeen {
 		nvidiaSmiGpus := fetchNvidiaSmiGpus()
 		for _, g := range nvidiaSmiGpus {
 			if !seen[g.Slot] {
 				gpuList = append(gpuList, g)
 				seen[g.Slot] = true
-				seen["nvidia-"+g.Vendor] = true
 			}
 		}
+		nvidiaSeen = len(nvidiaSmiGpus) > 0
 	}
 
 	// Always detect AMD (only if no AMD detected yet)
 	amdGpus := fetchAmdGpus()
 	for _, g := range amdGpus {
-		if !seen[g.Slot] && !seen["amd-"+g.Vendor] {
+		if !seen[g.Slot] {
 			gpuList = append(gpuList, g)
 			seen[g.Slot] = true
-			seen["amd-"+g.Vendor] = true
 		}
 	}
+	amdSeen = len(amdGpus) > 0
 
-	// Always detect sysfs GPUs (Intel iGPU, etc) - only add if not already present
-	// Skip NVIDIA/AMD from sysfs if we already detected them via NVML/nvidia-smi
+	// Always detect sysfs GPUs (Intel iGPU, etc). Skip NVIDIA/AMD that
+	// were already found via NVML/nvidia-smi to avoid duplicates.
 	sysfsGpus := fetchSysfsGpus()
 	for _, g := range sysfsGpus {
-		// Skip if already have this vendor's GPU (avoid duplicate dGPU)
-		if seen["nvidia-"+g.Vendor] || seen["amd-"+g.Vendor] {
+		if (g.Vendor == "NVIDIA" && nvidiaSeen) || (g.Vendor == "AMD" && amdSeen) {
 			continue
 		}
 		if !seen[g.Slot] {
@@ -363,6 +364,10 @@ func fetchSysfsGpus() []data.GpuInfo {
 			continue
 		}
 
+		if vendor == "Intel" {
+			MarkIntelDetected()
+		}
+
 		var memInfo uint64
 		memPath := devicePath + "/mem_info_vram_total"
 		if data := readFileUint64(memPath); data > 0 {
@@ -410,7 +415,7 @@ func fetchSysfsGpus() []data.GpuInfo {
 		memTotal := "N/A"
 		if memInfo > 0 {
 			memTotal = fmt.Sprintf("%d", memInfo)
-		} else if vram := getVramFromPciDb(gpuName, pciID); vram > 0 {
+		} else if vram := getVramFromPciDb(pciID); vram > 0 {
 			memTotal = fmt.Sprintf("%d", vram)
 		}
 
@@ -524,74 +529,44 @@ func getPciDeviceName(vendorID, deviceID string) string {
 	return ""
 }
 
-func getVramFromPciDb(gpuName, pciSlot string) int {
-	pciVRAM := map[string]int{
-		"10de:1f36": 6144,
-		"10de:1f14": 16384,
-		"10de:1f10": 8192,
-		"10de:1f06": 6144,
-		"10de:1f00": 4096,
-		"10de:1b80": 8192,
-		"10de:1b81": 8192,
-		"10de:1b82": 8192,
-		"10de:1b83": 6144,
-		"10de:1c03": 4096,
-		"10de:1c02": 2048,
-		"10de:1c80": 2048,
-		"10de:1c81": 2048,
-		"10de:1d12": 4096,
-		"10de:1d10": 4096,
-		"10de:1d11": 4096,
-		"10de:13d7": 4096,
-		"10de:13d0": 4096,
-		"1002:687f": 16384,
-		"1002:6870": 8192,
-		"1002:731f": 16384,
-		"1002:731e": 16384,
-		"1002:731d": 16384,
-		"1002:73ff": 12288,
-		"1002:73df": 8192,
-		"1002:73e1": 8192,
-		"1002:67df": 8192,
-		"1002:67c7": 4096,
-		"1002:67e8": 4096,
-		"1002:67e0": 2048,
-	}
+// pciVRAM maps a "vendor:device" PCI ID to its reference VRAM in MiB.
+// Lookups are direct, O(1), and don't depend on the human-readable name.
+var pciVRAM = map[string]int{
+	"10de:1f36": 6144,
+	"10de:1f14": 16384,
+	"10de:1f10": 8192,
+	"10de:1f06": 6144,
+	"10de:1f00": 4096,
+	"10de:1b80": 8192,
+	"10de:1b81": 8192,
+	"10de:1b82": 8192,
+	"10de:1b83": 6144,
+	"10de:1c03": 4096,
+	"10de:1c02": 2048,
+	"10de:1c80": 2048,
+	"10de:1c81": 2048,
+	"10de:1d12": 4096,
+	"10de:1d10": 4096,
+	"10de:1d11": 4096,
+	"10de:13d7": 4096,
+	"10de:13d0": 4096,
+	"1002:687f": 16384,
+	"1002:6870": 8192,
+	"1002:731f": 16384,
+	"1002:731e": 16384,
+	"1002:731d": 16384,
+	"1002:73ff": 12288,
+	"1002:73df": 8192,
+	"1002:73e1": 8192,
+	"1002:67df": 8192,
+	"1002:67c7": 4096,
+	"1002:67e8": 4096,
+	"1002:67e0": 2048,
+}
 
-	name := strings.ToLower(gpuName)
-	for id, vram := range pciVRAM {
-		if strings.Contains(name, "quadro rtx 3000") && id == "10de:1f36" {
-			return vram
-		}
-		if strings.Contains(name, "rtx a5000") && id == "10de:1f14" {
-			return vram
-		}
-		if strings.Contains(name, "rtx a4000") && id == "10de:1f10" {
-			return vram
-		}
-		if strings.Contains(name, "rtx a3000") && id == "10de:1f06" {
-			return vram
-		}
-		if strings.Contains(name, "gtx 1080") && id == "10de:1b80" {
-			return vram
-		}
-		if strings.Contains(name, "gtx 1070") && id == "10de:1b81" {
-			return vram
-		}
-		if strings.Contains(name, "gtx 1060") && id == "10de:1b83" {
-			return vram
-		}
-		if strings.Contains(name, "gtx 1050") {
-			if id == "10de:1c03" || id == "10de:1c02" {
-				return vram
-			}
-		}
-		if strings.Contains(name, "mx450") && id == "10de:1c80" {
-			return vram
-		}
-	}
-
-	return 0
+// getVramFromPciDb looks up reference VRAM by PCI ID. Returns 0 if unknown.
+func getVramFromPciDb(pciID string) int {
+	return pciVRAM[strings.ToLower(pciID)]
 }
 
 func detectVendorFromName(name string) string {

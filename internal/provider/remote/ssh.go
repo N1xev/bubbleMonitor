@@ -49,7 +49,7 @@ func buildSSHCmd(host config.RemoteHostConfig) *exec.Cmd {
 
 func CheckRemoteCmd(host config.RemoteHostConfig) tea.Cmd {
 	return func() tea.Msg {
-		m := data.RemoteHostMetrics{Online: false}
+		m := data.RemoteHostMetrics{}
 
 		cmd := buildSSHCmd(host)
 		out, err := cmd.Output()
@@ -59,49 +59,84 @@ func CheckRemoteCmd(host config.RemoteHostConfig) tea.Cmd {
 		}
 
 		parseRemoteOutput(string(out), &m)
-		m.Online = m.Error == ""
+		// Online is a function of "did the SSH command succeed", not of
+		// whether the parser liked every line. A partial parse shouldn't
+		// flip the host offline; we keep the values either way.
+		m.Online = true
+		if m.Error != "" {
+			m.Online = false
+		}
 
 		return msg.RemoteMsg{Host: host.Host, Metrics: m}
 	}
 }
 
-func parseRemoteOutput(output string, m *data.RemoteHostMetrics) {
-	sections := strings.Split(output, "===")
+// remoteSectionMarkers are the sentinel strings the SSH script on the remote
+// host writes between logical sections. Indices are used so adding a new
+// marker only requires updating this list.
+var remoteSectionMarkers = []string{
+	"===UPTIME===",
+	"===LOAD===",
+	"===CPU_COUNT===",
+	"===ENDMEM===",
+	"===ENDDISK===",
+	"===ENDNET===",
+}
 
-	for i := 0; i < len(sections)-1; i += 2 {
-		if i+1 >= len(sections) {
-			break
+// sectionRanges returns a slice of (start, end) byte offsets into output
+// for each marker. end is the start of the next marker (or len(output) for
+// the last section). This is the single source of truth for slicing
+// the remote script output; everything else uses it instead of doing its
+// own fragile string-splitting.
+func sectionRanges(output string) []sectionRange {
+	ranges := make([]sectionRange, 0, len(remoteSectionMarkers))
+	for i, marker := range remoteSectionMarkers {
+		start := strings.Index(output, marker)
+		if start < 0 {
+			continue
 		}
-		key := strings.TrimSpace(sections[i])
-		val := sections[i+1]
-
-		switch key {
-		case "UPTIME":
-			m.Uptime = parseUptime(val)
-		case "LOAD":
-			parseLoadAvg(val, m)
-		case "CPU_COUNT":
-			m.CpuCount, _ = strconv.Atoi(strings.TrimSpace(val))
-		case "":
-			parseMeminfo(val, m)
-		case "ENDMEM":
-			parseMeminfo(val, m)
-		case "ENDDISK":
-			parseDisk(val, m)
-		case "ENDNET":
-			parseNet(val, m)
+		start += len(marker)
+		end := len(output)
+		for j := i + 1; j < len(remoteSectionMarkers); j++ {
+			if next := strings.Index(output[start:], remoteSectionMarkers[j]); next >= 0 {
+				end = start + next
+				break
+			}
 		}
+		ranges = append(ranges, sectionRange{name: marker, start: start, end: end})
 	}
+	return ranges
+}
 
-	procIdx := strings.Index(output, "===ENDNET===")
-	if procIdx >= 0 && len(output) > procIdx+12 {
-		procSection := output[procIdx+12:]
-		parseProcesses(procSection, m)
+type sectionRange struct {
+	name  string
+	start int
+	end   int
+}
+
+func parseRemoteOutput(output string, m *data.RemoteHostMetrics) {
+	for _, sr := range sectionRanges(output) {
+		body := output[sr.start:sr.end]
+		switch sr.name {
+		case "===UPTIME===":
+			m.Uptime = parseUptime(body)
+		case "===LOAD===":
+			parseLoadAvg(body, m)
+		case "===CPU_COUNT===":
+			m.CpuCount, _ = strconv.Atoi(strings.TrimSpace(body))
+		case "===ENDMEM===":
+			parseMeminfo(body, m)
+		case "===ENDDISK===":
+			parseDisk(body, m)
+		case "===ENDNET===":
+			parseNet(body, m)
+			// Anything after the last marker is the process list.
+			parseProcesses(output[sr.end:], m)
+		}
 	}
 
 	if m.Uptime == "" {
-		lines := strings.Split(output, "\n")
-		for _, line := range lines {
+		for _, line := range strings.Split(output, "\n") {
 			l := strings.TrimSpace(line)
 			if strings.HasPrefix(l, "up") || strings.HasPrefix(l, "load") {
 				m.Uptime = l
@@ -120,13 +155,19 @@ func parseUptime(line string) string {
 func parseLoadAvg(line string, m *data.RemoteHostMetrics) {
 	fields := strings.Fields(line)
 	if len(fields) >= 1 {
-		m.LoadAvg1, _ = strconv.ParseFloat(fields[0], 64)
+		if v, err := strconv.ParseFloat(fields[0], 64); err == nil {
+			m.LoadAvg1 = v
+		}
 	}
 	if len(fields) >= 2 {
-		m.LoadAvg5, _ = strconv.ParseFloat(fields[1], 64)
+		if v, err := strconv.ParseFloat(fields[1], 64); err == nil {
+			m.LoadAvg5 = v
+		}
 	}
 	if len(fields) >= 3 {
-		m.LoadAvg15, _ = strconv.ParseFloat(fields[2], 64)
+		if v, err := strconv.ParseFloat(fields[2], 64); err == nil {
+			m.LoadAvg15 = v
+		}
 	}
 }
 

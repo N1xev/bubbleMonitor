@@ -34,6 +34,19 @@ var (
 	initialPidsLoaded atomic.Bool
 )
 
+// pruneProcessCache drops every entry whose pid is not in alivePids. Pass
+// an empty map to drop everything (used on error paths so dead PIDs don't
+// linger indefinitely).
+func pruneProcessCache(alivePids map[int32]bool) {
+	cacheMutex.Lock()
+	for pid := range processCache {
+		if !alivePids[pid] {
+			delete(processCache, pid)
+		}
+	}
+	cacheMutex.Unlock()
+}
+
 // PidsOnlyCmd fetches only PIDs for cache warming (lightweight)
 func PidsOnlyCmd() tea.Cmd {
 	return func() tea.Msg {
@@ -58,6 +71,10 @@ func ProcessesCmd(sortBy string, sortDirection string) tea.Cmd {
 
 		pids, err := process.Pids()
 		if err != nil {
+			// Prune whatever we can so a transient error doesn't keep
+			// dead PIDs in the cache forever. Pass an empty alive set;
+			// the next successful fetch will repopulate.
+			pruneProcessCache(map[int32]bool{})
 			return msg.ProcessesMsg{}
 		}
 
@@ -150,13 +167,7 @@ func ProcessesCmd(sortBy string, sortDirection string) tea.Cmd {
 		}
 
 		// Prune dead processes
-		cacheMutex.Lock()
-		for pid := range processCache {
-			if !currentPids[pid] {
-				delete(processCache, pid)
-			}
-		}
-		cacheMutex.Unlock()
+		pruneProcessCache(currentPids)
 
 		sort.Slice(procList, func(i, j int) bool {
 			var less bool

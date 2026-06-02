@@ -4,6 +4,7 @@ import (
 	"log"
 	"os/exec"
 	"runtime"
+	"sync"
 	"sync/atomic"
 
 	"github.com/shirou/gopsutil/v3/disk"
@@ -14,7 +15,6 @@ import (
 )
 
 var (
-	detectionDone    atomic.Bool
 	nvidiaDetected   atomic.Bool
 	amdDetected      atomic.Bool
 	intelDetected    atomic.Bool
@@ -27,38 +27,38 @@ var (
 	k8sDetected      atomic.Bool
 )
 
+var (
+	detectOnce    sync.Once
+	capabilities  *data.HardwareCapabilities
+)
+
 func DetectHardware() *data.HardwareCapabilities {
-	if detectionDone.Load() {
-		return getCapabilities()
-	}
-
-	detectNvidia()
-	detectAmd()
-	detectBattery()
-	detectNetwork()
-	detectDiskIO()
-	detectTemp()
-	detectServices()
-	detectContainers()
-
-	detectionDone.Store(true)
-
-	return getCapabilities()
-}
-
-func getCapabilities() *data.HardwareCapabilities {
-	return &data.HardwareCapabilities{
-		HasNvidiaGPU:         nvidiaDetected.Load(),
-		HasAmdGPU:            amdDetected.Load(),
-		HasIntelGPU:          intelDetected.Load(),
-		HasBattery:           batteryDetected.Load(),
-		HasNetworkInterfaces: networkDetected.Load(),
-		HasDiskIO:            diskIODetected.Load(),
-		HasServices:          servicesDetected.Load(),
-		HasTempSensors:       tempDetected.Load(),
-		HasDocker:            dockerDetected.Load(),
-		HasKubernetes:        k8sDetected.Load(),
-	}
+	// sync.Once guarantees the detect*() sequence runs exactly once
+	// across all callers, eliminating the check-then-act race that the
+	// seven adapter Has*() methods previously exposed.
+	detectOnce.Do(func() {
+		detectNvidia()
+		detectAmd()
+		detectBattery()
+		detectNetwork()
+		detectDiskIO()
+		detectTemp()
+		detectServices()
+		detectContainers()
+		capabilities = &data.HardwareCapabilities{
+			HasNvidiaGPU:         nvidiaDetected.Load(),
+			HasAmdGPU:            amdDetected.Load(),
+			HasIntelGPU:          intelDetected.Load(),
+			HasBattery:           batteryDetected.Load(),
+			HasNetworkInterfaces: networkDetected.Load(),
+			HasDiskIO:            diskIODetected.Load(),
+			HasServices:          servicesDetected.Load(),
+			HasTempSensors:       tempDetected.Load(),
+			HasDocker:            dockerDetected.Load(),
+			HasKubernetes:        k8sDetected.Load(),
+		}
+	})
+	return capabilities
 }
 
 func detectAmd() {
@@ -164,3 +164,10 @@ func detectContainers() {
 	dockerDetected.Store(HasDocker())
 	k8sDetected.Store(HasKubernetes())
 }
+
+// MarkIntelDetected is called by the sysfs GPU scanner when an Intel iGPU
+// is found. The Intel detection path is the only one that isn't driven by
+// a top-level DetectHardware sub-function because the per-device probe
+// lives in fetchSysfsGpus; we funnel the result back into the capability
+// snapshot via this setter.
+func MarkIntelDetected() { intelDetected.Store(true) }

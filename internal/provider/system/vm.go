@@ -1,6 +1,7 @@
 package system
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -32,7 +33,6 @@ const (
 )
 
 var (
-	vmChecked      atomic.Bool
 	isVM           atomic.Bool
 	hypervisorType atomic.Value
 	vmCheckOnce    sync.Once
@@ -44,8 +44,6 @@ type vmDetection struct {
 
 func detectVM() {
 	vmCheckOnce.Do(func() {
-		vmChecked.Store(true)
-
 		if runtime.GOOS != "linux" {
 			isVM.Store(detectWindowsVM())
 			if isVM.Load() {
@@ -79,7 +77,7 @@ func detectLinuxVM() vmDetection {
 }
 
 func detectCPUFlags() vmDetection {
-	data, err := osReadFile("/proc/cpuinfo")
+	data, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		return vmDetection{}
 	}
@@ -124,7 +122,7 @@ func detectDMI() vmDetection {
 	}
 
 	for _, file := range productFiles {
-		data, err := osReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
@@ -264,19 +262,19 @@ func VmCmd() tea.Cmd {
 }
 
 func detectVMLinuxType() string {
-	if _, err := osReadFile("/proc/1/cgroup"); err == nil {
-		data, _ := osReadFile("/proc/1/cgroup")
+	if _, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		data, _ := os.ReadFile("/proc/1/cgroup")
 		content := strings.ToLower(string(data))
 		if strings.Contains(content, "docker") || strings.Contains(content, "container") {
 			return "Container"
 		}
 	}
 
-	if _, err := osReadFile("/.dockerenv"); err == nil {
+	if _, err := os.ReadFile("/.dockerenv"); err == nil {
 		return "Docker"
 	}
 
-	if _, err := osReadFile("/run/.containerenv"); err == nil {
+	if _, err := os.ReadFile("/run/.containerenv"); err == nil {
 		return "Container"
 	}
 
@@ -298,7 +296,7 @@ func detectVirtCPU() int {
 	}
 
 	for _, path := range possiblePaths {
-		data, err := osReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
@@ -335,7 +333,7 @@ func detectVirtCPUUsed() int {
 	}
 
 	for _, path := range paths {
-		data, err := osReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
@@ -364,23 +362,15 @@ func detectVirtCPUUsed() int {
 }
 
 func exists(path string) bool {
-	_, err := osReadFile(path)
+	_, err := os.Stat(path)
 	return err == nil
-}
-
-func osReadFile(path string) ([]byte, error) {
-	return osReadFileImpl(path)
-}
-
-func osReadFileImpl(path string) ([]byte, error) {
-	return os.ReadFile(path)
 }
 
 func parseStrToInt(s string, result *int) (int, error) {
 	var n int
 	for _, c := range s {
 		if c < '0' || c > '9' {
-			return 0, nil
+			return 0, fmt.Errorf("non-numeric character %q in %q", string(c), s)
 		}
 		n = n*10 + int(c-'0')
 	}
