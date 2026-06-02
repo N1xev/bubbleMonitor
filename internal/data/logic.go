@@ -7,7 +7,6 @@ import (
 )
 
 type treeBuilder struct {
-	procMap  map[int32]*ProcessInfo
 	procIdx  map[int32]int
 	children map[int32][]int32
 }
@@ -38,16 +37,18 @@ func (s *AppState) InvalidateProcessCache() {
 }
 
 func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int32]int) {
+	// Use integer indices (not pointers into the caller's slice) to avoid
+	// dangling references if procs is ever swapped or re-allocated.
 	tb := &treeBuilder{
-		procMap:  make(map[int32]*ProcessInfo, 500),
-		procIdx:  make(map[int32]int, 500),
-		children: make(map[int32][]int32, 500),
+		procIdx:  make(map[int32]int, len(procs)),
+		children: make(map[int32][]int32, len(procs)),
 	}
 
+	procSet := make(map[int32]struct{}, len(procs))
 	for i := range procs {
-		tb.procMap[procs[i].Pid] = &procs[i]
 		tb.procIdx[procs[i].Pid] = i
 		tb.children[procs[i].Ppid] = append(tb.children[procs[i].Ppid], procs[i].Pid)
+		procSet[procs[i].Pid] = struct{}{}
 	}
 
 	flatList := make([]ProcessInfo, 0, len(procs))
@@ -55,7 +56,7 @@ func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int
 
 	roots := make([]int32, 0, 10)
 	for _, p := range procs {
-		if _, exists := tb.procMap[p.Ppid]; !exists {
+		if _, exists := procSet[p.Ppid]; !exists {
 			roots = append(roots, p.Pid)
 		}
 	}
@@ -64,20 +65,22 @@ func (s *AppState) buildProcessTree(procs []ProcessInfo) ([]ProcessInfo, map[int
 
 	var build func(pid int32, level int)
 	build = func(pid int32, level int) {
-		if p, ok := tb.procMap[pid]; ok {
-			flatList = append(flatList, *p)
-			indentMap[pid] = level
+		idx, ok := tb.procIdx[pid]
+		if !ok {
+			return
+		}
+		flatList = append(flatList, procs[idx])
+		indentMap[pid] = level
 
-			if s.IsCollapsed(pid) {
-				return
-			}
+		if s.IsCollapsed(pid) {
+			return
+		}
 
-			kids := tb.children[pid]
-			sort.Slice(kids, func(i, j int) bool { return tb.procIdx[kids[i]] < tb.procIdx[kids[j]] })
+		kids := tb.children[pid]
+		sort.Slice(kids, func(i, j int) bool { return tb.procIdx[kids[i]] < tb.procIdx[kids[j]] })
 
-			for _, kid := range kids {
-				build(kid, level+1)
-			}
+		for _, kid := range kids {
+			build(kid, level+1)
 		}
 	}
 

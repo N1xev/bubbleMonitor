@@ -3,37 +3,24 @@ package util
 import (
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
-	percentCache     = make([]string, 101)
-	percentCacheInit bool
-
-	dec1Cache     = make([]string, 1000)
-	dec1CacheInit bool
-
+	percentCache = make([]string, 101)
+	dec1Cache    = make([]string, 1000)
 	intCache     = make([]string, 10000)
-	intCacheInit bool
 )
 
 func init() {
-	if !percentCacheInit {
-		percentCacheInit = true
-		for i := 0; i <= 100; i++ {
-			percentCache[i] = strconv.Itoa(i) + "%"
-		}
+	for i := range percentCache {
+		percentCache[i] = strconv.Itoa(i) + "%"
 	}
-	if !dec1CacheInit {
-		dec1CacheInit = true
-		for i := 0; i < 1000; i++ {
-			dec1Cache[i] = formatFloat1(float64(i) / 10)
-		}
+	for i := range dec1Cache {
+		dec1Cache[i] = formatFloat1(float64(i) / 10)
 	}
-	if !intCacheInit {
-		intCacheInit = true
-		for i := 0; i < 10000; i++ {
-			intCache[i] = strconv.Itoa(i)
-		}
+	for i := range intCache {
+		intCache[i] = strconv.Itoa(i)
 	}
 }
 
@@ -121,9 +108,16 @@ func FastMhz(val int) string {
 	return FastInt(val) + " MHz"
 }
 
-var percentBuilder = new(strings.Builder)
+// percentBuilderMu guards a single reusable strings.Builder. The previous
+// implementation shared the builder across FastPctWithPrefix and FastMbUsed
+// without synchronization, which raced under -race as soon as two callers
+// (e.g. parallel renders) tried to Reset+WriteString at the same time.
+var percentBuilderMu sync.Mutex
+var percentBuilder strings.Builder
 
 func FastPctWithPrefix(prefix string, val float64) string {
+	percentBuilderMu.Lock()
+	defer percentBuilderMu.Unlock()
 	percentBuilder.Reset()
 	percentBuilder.WriteString(prefix)
 	percentBuilder.WriteString(": ")
@@ -132,6 +126,8 @@ func FastPctWithPrefix(prefix string, val float64) string {
 }
 
 func FastMbUsed(total, used string) string {
+	percentBuilderMu.Lock()
+	defer percentBuilderMu.Unlock()
 	percentBuilder.Reset()
 	percentBuilder.WriteString(used)
 	percentBuilder.WriteString(" / ")

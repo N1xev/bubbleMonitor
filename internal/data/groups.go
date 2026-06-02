@@ -179,9 +179,8 @@ type UIState struct {
 	NextToastID int64
 
 	// Error handling
-	LastError     string
-	LastErrorTime time.Time
-	TickCount     uint64
+	LastError string
+	TickCount uint64
 
 	// Chart display
 	ChartType string
@@ -200,9 +199,12 @@ type UIState struct {
 
 	// Input zones
 	Zones       []input.Zone
-	ZoneManager interface{} // *input.ZoneManager - stored as interface to avoid circular import
+	ZoneManager any // *input.ZoneManager - stored as any to avoid circular import
 
 	// Content rendering
+	// ContentBuilder is single-owner: a tab borrows it via Reset()+WriteString
+	// and immediately calls String(). The render path runs single-threaded on
+	// the Bubble Tea loop, so the strings.Builder value semantics are safe.
 	ContentBuilder strings.Builder
 
 	// Config timestamps

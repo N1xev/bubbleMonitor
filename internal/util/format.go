@@ -16,6 +16,12 @@ func FormatBytes(bytes uint64) string {
 		div *= unit
 		exp++
 	}
+	// Clamp the exponent so we never index past the end of the unit string
+	// (e.g. 1 ZiB or larger used to panic on out-of-bounds indexing).
+	const maxExp = len("KMGTPE") - 1
+	if exp > maxExp {
+		exp = maxExp
+	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 

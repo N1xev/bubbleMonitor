@@ -27,40 +27,65 @@ func NewAlertManager() *AlertManager {
 	}
 }
 
+// snapshot is a thread-safe copy of the fields CheckAlerts reads from AppState.
+// Reading directly from s.Metrics / s.Config without holding stateMu would
+// race with metrics-collection and config-reload goroutines.
+type alertSnapshot struct {
+	cpu            float64
+	memory         float64
+	cpuTemp        float64
+	thresholds     map[config.MetricType]float64
+	diskPartitions []DiskPartition
+}
+
+func snapshotForAlerts(s *AppState) alertSnapshot {
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return alertSnapshot{
+		cpu:            s.Metrics.Cpu,
+		memory:         s.Metrics.Memory,
+		cpuTemp:        s.Metrics.CpuTemp,
+		thresholds:     s.Config.Config.Thresholds,
+		diskPartitions: s.Metrics.DiskPartitions,
+	}
+}
+
 func (am *AlertManager) CheckAlerts(s *AppState) {
+	snap := snapshotForAlerts(s)
+
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	cpuThreshold := s.Config.Config.Thresholds[config.MetricCPU]
-	if cpuThreshold > 0 && s.Metrics.Cpu > cpuThreshold {
+	cpuThreshold := snap.thresholds[config.MetricCPU]
+	if cpuThreshold > 0 && snap.cpu > cpuThreshold {
 		am.ActiveAlerts[config.MetricCPU] = Alert{
 			Type:      config.MetricCPU,
-			Value:     s.Metrics.Cpu,
+			Value:     snap.cpu,
 			Threshold: cpuThreshold,
-			Message:   fmt.Sprintf("CPU Usage High: %.1f%% > (%.0f%%)", s.Metrics.Cpu, cpuThreshold),
+			Message:   fmt.Sprintf("CPU Usage High: %.1f%% > (%.0f%%)", snap.cpu, cpuThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {
 		delete(am.ActiveAlerts, config.MetricCPU)
 	}
 
-	memThreshold := s.Config.Config.Thresholds[config.MetricMem]
-	if memThreshold > 0 && s.Metrics.Memory > memThreshold {
+	memThreshold := snap.thresholds[config.MetricMem]
+	if memThreshold > 0 && snap.memory > memThreshold {
 		am.ActiveAlerts[config.MetricMem] = Alert{
 			Type:      config.MetricMem,
-			Value:     s.Metrics.Memory,
+			Value:     snap.memory,
 			Threshold: memThreshold,
-			Message:   fmt.Sprintf("Memory Usage High: %.1f%% > (%.0f%%)", s.Metrics.Memory, memThreshold),
+			Message:   fmt.Sprintf("Memory Usage High: %.1f%% > (%.0f%%)", snap.memory, memThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {
 		delete(am.ActiveAlerts, config.MetricMem)
 	}
 
-	diskThreshold := s.Config.Config.Thresholds[config.MetricDisk]
+	diskThreshold := snap.thresholds[config.MetricDisk]
 	if diskThreshold > 0 {
 		var totalUsed, totalAll uint64
-		for _, part := range s.Metrics.DiskPartitions {
+		for _, part := range snap.diskPartitions {
 			totalUsed += part.Used
 			totalAll += part.Total
 		}
@@ -79,16 +104,23 @@ func (am *AlertManager) CheckAlerts(s *AppState) {
 			} else {
 				delete(am.ActiveAlerts, config.MetricDisk)
 			}
+		} else {
+			// Disks vanished or no data; clear any stale alert.
+			delete(am.ActiveAlerts, config.MetricDisk)
 		}
+	} else {
+		// Threshold toggled off; mirror the CPU/Memory/Temp branches and
+		// drop any stale disk alert.
+		delete(am.ActiveAlerts, config.MetricDisk)
 	}
 
-	tempThreshold := s.Config.Config.Thresholds[config.MetricTemp]
-	if tempThreshold > 0 && s.Metrics.CpuTemp > tempThreshold {
+	tempThreshold := snap.thresholds[config.MetricTemp]
+	if tempThreshold > 0 && snap.cpuTemp > tempThreshold {
 		am.ActiveAlerts[config.MetricTemp] = Alert{
 			Type:      config.MetricTemp,
-			Value:     s.Metrics.CpuTemp,
+			Value:     snap.cpuTemp,
 			Threshold: tempThreshold,
-			Message:   fmt.Sprintf("CPU Temp High: %.1f°C > (%.0f°C)", s.Metrics.CpuTemp, tempThreshold),
+			Message:   fmt.Sprintf("CPU Temp High: %.1f°C > (%.0f°C)", snap.cpuTemp, tempThreshold),
 			Timestamp: time.Now(),
 		}
 	} else {

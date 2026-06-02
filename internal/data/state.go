@@ -2,7 +2,6 @@ package data
 
 import (
 	"sync"
-	"time"
 )
 
 type AppState struct {
@@ -12,14 +11,15 @@ type AppState struct {
 	Config  ConfigState
 	Remote  RemoteState
 
-	LastErrorTime time.Time
-
 	stateMu sync.RWMutex
 }
 
 func (s *AppState) SetSuspended(pid int32, suspended bool) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
+	if s.Process.SuspendedState == nil {
+		s.Process.SuspendedState = make(map[int32]bool)
+	}
 	if suspended {
 		s.Process.SuspendedState[pid] = true
 	} else {
@@ -36,6 +36,9 @@ func (s *AppState) IsSuspended(pid int32) bool {
 func (s *AppState) ToggleCollapsed(pid int32) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
+	if s.Process.CollapsedPids == nil {
+		s.Process.CollapsedPids = make(map[int32]bool)
+	}
 	s.Process.CollapsedPids[pid] = !s.Process.CollapsedPids[pid]
 }
 
@@ -48,6 +51,9 @@ func (s *AppState) IsCollapsed(pid int32) bool {
 func (s *AppState) ToggleBookmark(pid int32) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
+	if s.Process.BookmarkedPids == nil {
+		s.Process.BookmarkedPids = make(map[int32]bool)
+	}
 	s.Process.BookmarkedPids[pid] = !s.Process.BookmarkedPids[pid]
 }
 
@@ -65,6 +71,8 @@ func (s *AppState) GetProcessByPid(pid int32) (ProcessInfo, bool) {
 }
 
 func (s *AppState) SyncProcessesMap() {
+	s.stateMu.Lock()
+	defer s.stateMu.Unlock()
 	s.Process.ProcessesByPid = make(map[int32]ProcessInfo, len(s.Process.Processes))
 	for _, p := range s.Process.Processes {
 		s.Process.ProcessesByPid[p.Pid] = p
@@ -108,16 +116,25 @@ func (s *AppState) PruneDeadProcessMaps(alivePids map[int32]bool) {
 func (s *AppState) GetOrCreateHistory(pid int32) *RingBuffer {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	if _, ok := s.Metrics.ProcessHistory[pid]; !ok {
-		s.Metrics.ProcessHistory[pid] = NewRingBuffer(s.Config.HistoryLength)
+	if s.Metrics.ProcessHistory == nil {
+		s.Metrics.ProcessHistory = make(map[int32]*RingBuffer)
 	}
-	return s.Metrics.ProcessHistory[pid]
+	hist, ok := s.Metrics.ProcessHistory[pid]
+	if !ok {
+		hist = NewRingBuffer(s.Config.HistoryLength)
+		s.Metrics.ProcessHistory[pid] = hist
+	}
+	return hist
 }
 
 func (s *AppState) GetHistory(pid int32) (*RingBuffer, bool) {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
 	hist, ok := s.Metrics.ProcessHistory[pid]
+	// The returned *RingBuffer shares state with the rest of the app.
+	// The caller must not retain the pointer past a tick; concurrent
+	// PruneDeadProcessHistory may delete the map entry while the
+	// caller still uses the buffer.
 	return hist, ok
 }
 

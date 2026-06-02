@@ -14,7 +14,15 @@ type RingBuffer struct {
 	sumDirty  bool
 }
 
+// minBufferSize is the smallest legal ring buffer capacity. Anything below
+// this either crashes division-by-zero in Resize or produces a buffer that
+// cannot be meaningfully indexed.
+const minBufferSize = 1
+
 func NewRingBuffer(size int) *RingBuffer {
+	if size < minBufferSize {
+		size = minBufferSize
+	}
 	return &RingBuffer{
 		data:     make([]float64, size),
 		maxDirty: true,
@@ -67,6 +75,9 @@ func (r *RingBuffer) Get(i int) float64 {
 	if r.length == 0 {
 		return 0
 	}
+	if i < 0 {
+		return 0
+	}
 	if !r.full {
 		if i >= r.length {
 			return 0
@@ -79,13 +90,26 @@ func (r *RingBuffer) Get(i int) float64 {
 }
 
 func (r *RingBuffer) Max() float64 {
+	// Fast path: read cache without mutating anything. RLock is enough
+	// because the dirty flags are themselves guarded by mu; the only
+	// state that could change is the cache itself, which we never write
+	// unless the cache is dirty.
+	r.mu.RLock()
+	if r.length > 0 && !r.maxDirty {
+		v := r.cachedMax
+		r.mu.RUnlock()
+		return v
+	}
+	r.mu.RUnlock()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Re-check after acquiring the write lock; another goroutine may
+	// have already recomputed the cache.
 	if r.length == 0 {
 		return 0
 	}
-
 	if !r.maxDirty {
 		return r.cachedMax
 	}
@@ -111,13 +135,20 @@ func (r *RingBuffer) Max() float64 {
 }
 
 func (r *RingBuffer) Avg() float64 {
+	r.mu.RLock()
+	if r.length > 0 && !r.sumDirty {
+		v := r.cachedSum / float64(r.length)
+		r.mu.RUnlock()
+		return v
+	}
+	r.mu.RUnlock()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.length == 0 {
 		return 0
 	}
-
 	if !r.sumDirty {
 		return r.cachedSum / float64(r.length)
 	}
@@ -147,6 +178,10 @@ type Accessor interface {
 // Resize creates a new buffer with the given size, preserving as much
 // existing data as possible (newest data is kept).
 func (r *RingBuffer) Resize(newSize int) {
+	if newSize < minBufferSize {
+		newSize = minBufferSize
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -173,7 +208,11 @@ func (r *RingBuffer) Resize(newSize int) {
 	}
 
 	r.data = newData
-	r.curr = count % newSize
+	if newSize > 0 {
+		r.curr = count % newSize
+	} else {
+		r.curr = 0
+	}
 	r.length = count
 	r.full = count == newSize
 	r.maxDirty = true
