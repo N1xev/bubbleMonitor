@@ -1027,6 +1027,8 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 
 	if s.Config.BackgroundOpaque {
 		v.BackgroundColor = bg
+	} else {
+		v.BackgroundColor = lipgloss.NoColor{}
 	}
 
 	s.UI.Zones = zoneManager.GetZones()

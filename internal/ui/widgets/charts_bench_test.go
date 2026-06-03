@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
 
@@ -18,8 +17,8 @@ func BenchmarkRenderSparkline(b *testing.B) {
 		ring.Push(float64(i % 100))
 	}
 
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -37,8 +36,8 @@ func BenchmarkRenderLineChart(b *testing.B) {
 		ring.Push(float64(i % 100))
 	}
 
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -56,8 +55,8 @@ func BenchmarkRenderBrailleChart(b *testing.B) {
 		ring.Push(float64(i % 100))
 	}
 
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -76,8 +75,8 @@ func BenchmarkRenderLineChartLarge(b *testing.B) {
 
 	width := 200 // Large terminal width
 	height := 50 // Large terminal height
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -93,8 +92,8 @@ func BenchmarkRenderAllCharts(b *testing.B) {
 		rb.Push(float64(i % 100))
 	}
 
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

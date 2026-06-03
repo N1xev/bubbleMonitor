@@ -2,10 +2,10 @@ package overlays
 
 import (
 	"fmt"
+	"image/color"
 	"slices"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/config"
 	"github.com/N1xev/bubbleMonitor/internal/data"
@@ -13,7 +13,7 @@ import (
 )
 
 // RenderSettingsOverlay renders the settings configuration modal
-func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg compat.AdaptiveColor) string {
+func RenderSettingsOverlay(s *data.AppState, width, height int, b, p, t, mu, bg color.Color) string {
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
 	itemStyle := lipgloss.NewStyle().Foreground(t)

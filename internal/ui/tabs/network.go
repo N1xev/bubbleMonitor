@@ -1,10 +1,10 @@
 package tabs
 
 import (
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
@@ -23,7 +23,7 @@ var networkLabels = struct {
 }
 
 // RenderNetwork renders the network interfaces tab
-func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, t, mu, p, b, bg compat.AdaptiveColor, availHeight int) string {
+func RenderNetwork(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, t, mu, p, b, bg color.Color, availHeight int) string {
 	if len(s.Metrics.NetworkInterfaces) == 0 {
 		return "Loading network interfaces..."
 	}

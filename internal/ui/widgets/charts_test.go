@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
 
@@ -17,8 +16,8 @@ func TestChartVisualRegression(t *testing.T) {
 		rb.Push(float64(i * 10))
 	}
 
-	c1 := compat.AdaptiveColor{Light: lipgloss.Color("#00FF00"), Dark: lipgloss.Color("#00FF00")}
-	c2 := compat.AdaptiveColor{Light: lipgloss.Color("#FF0000"), Dark: lipgloss.Color("#FF0000")}
+	c1 := lipgloss.Color("#00FF00")
+	c2 := lipgloss.Color("#FF0000")
 
 	t.Run("RenderLineChart", func(t *testing.T) {
 		output := RenderLineChart(rb, 10, 5, c1, c2, 100.0, "default")

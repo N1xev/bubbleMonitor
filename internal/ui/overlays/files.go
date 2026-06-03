@@ -2,16 +2,16 @@ package overlays
 
 import (
 	"fmt"
+	"image/color"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 )
 
 // RenderOpenFilesOverlay renders the open files list
-func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg compat.AdaptiveColor) string {
+func RenderOpenFilesOverlay(s *data.AppState, width, height int, b, p, t, mu, bg color.Color) string {
 	boxWidth := data.OpenFilesDefaultWidth
 	if boxWidth > width-4 {
 		boxWidth = width - 4

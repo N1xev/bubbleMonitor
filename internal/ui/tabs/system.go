@@ -1,19 +1,19 @@
 package tabs
 
 import (
+	"image/color"
 	"runtime"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 	"github.com/N1xev/bubbleMonitor/internal/util"
 )
 
-func RenderSystem(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, t, mu, p, b, bg, su, w, a compat.AdaptiveColor, availHeight int, activeBlock int) string {
+func RenderSystem(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, t, mu, p, b, bg, su, w, a color.Color, availHeight int, activeBlock int) string {
 	if s.Metrics.HostInfo == nil {
 		return "Loading system information..."
 	}

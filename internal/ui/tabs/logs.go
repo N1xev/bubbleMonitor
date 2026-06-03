@@ -1,10 +1,10 @@
 package tabs
 
 import (
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
@@ -17,7 +17,7 @@ const (
 	logWarn  = "warn"
 )
 
-func RenderLogs(s *data.AppState, container lipgloss.Style, su, w, a, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
+func RenderLogs(s *data.AppState, container lipgloss.Style, su, w, a, t, mu, p, b color.Color, availHeight int) string {
 	boxWidth := s.UI.Width
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 

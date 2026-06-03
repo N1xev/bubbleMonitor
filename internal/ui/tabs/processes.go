@@ -1,6 +1,7 @@
 package tabs
 
 import (
+	"image/color"
 	"runtime"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ import (
 )
 
 // RenderProcesses renders the processes tab
-func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeIndents map[int32]int, container lipgloss.Style, su, w, a, t, mu, p, b compat.AdaptiveColor, availHeight int, mouseY int, listStartY int, zoneManager input.ZoneManager) string {
+func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeIndents map[int32]int, container lipgloss.Style, su, w, a, t, mu, p, b color.Color, availHeight int, mouseY int, listStartY int, zoneManager input.ZoneManager) string {
 	boxWidth := s.UI.Width
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
@@ -227,7 +228,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		sStyle := statusStyle
 
 		if i < 5 {
-			var topColor compat.AdaptiveColor
+			var topColor color.Color
 			switch i {
 			case 0:
 				topColor = a
@@ -328,7 +329,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 		paddedMem := util.PadLeft(memStr, memWidth)
 
 		// Apply background to each cell individually to avoid ANSI reset issues
-		var rowBg compat.AdaptiveColor
+		var rowBg color.Color
 		hasBg := false
 		if isSelected {
 			rowBg = selColor
@@ -421,7 +422,7 @@ func RenderProcesses(s *data.AppState, visibleProcs []data.ProcessInfo, treeInde
 }
 
 // renderProcessDetails renders the details panel for the selected process
-func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container lipgloss.Style, boxWidth, contentHeight int, t, mu, p, b, su, w, a compat.AdaptiveColor) string {
+func renderProcessDetails(s *data.AppState, proc *data.ProcessInfo, container lipgloss.Style, boxWidth, contentHeight int, t, mu, p, b, su, w, a color.Color) string {
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 	contentWidth := boxWidth - 4
 

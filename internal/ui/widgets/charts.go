@@ -2,11 +2,11 @@ package widgets
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 	"sync"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/util"
@@ -48,23 +48,23 @@ var chartCache = &chartStyleCache{
 	styles: make(map[string]lipgloss.Style),
 }
 
-func getChartStyle(color compat.AdaptiveColor, theme string) lipgloss.Style {
+func getChartStyle(c color.Color, theme string) lipgloss.Style {
 	if chartCache.theme != theme {
 		chartCache.theme = theme
 		chartCache.styles = make(map[string]lipgloss.Style)
 	}
 
-	key := fmt.Sprintf("%v", color)
+	key := fmt.Sprintf("%v", c)
 	if style, ok := chartCache.styles[key]; ok {
 		return style
 	}
 
-	style := lipgloss.NewStyle().Foreground(color)
+	style := lipgloss.NewStyle().Foreground(c)
 	chartCache.styles[key] = style
 	return style
 }
 
-func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
+func RenderSparkline(data data.Accessor, width, height int, c1, c2 color.Color, fixedMax float64, theme string) string {
 	if data.Len() == 0 {
 		return "No data"
 	}
@@ -118,7 +118,7 @@ func RenderSparkline(data data.Accessor, width, height int, c1, c2 compat.Adapti
 	return result.String()
 }
 
-func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
+func RenderLineChart(data data.Accessor, width, height int, c1, c2 color.Color, fixedMax float64, theme string) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"
 	}
@@ -193,7 +193,7 @@ func RenderLineChart(data data.Accessor, width, height int, c1, c2 compat.Adapti
 	return strings.Join(lines, "\n")
 }
 
-func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
+func RenderBarChart(data data.Accessor, width, height int, c1, c2 color.Color, fixedMax float64, theme string) string {
 	if data.Len() == 0 {
 		return "No data"
 	}
@@ -242,7 +242,7 @@ func RenderBarChart(data data.Accessor, width, height int, c1, c2 compat.Adaptiv
 	return strings.Join(lines, "\n")
 }
 
-func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 compat.AdaptiveColor, fixedMax float64, theme string) string {
+func RenderBrailleChart(data data.Accessor, width, height int, c1, c2 color.Color, fixedMax float64, theme string) string {
 	if data.Len() == 0 || height < 1 {
 		return "No data"
 	}

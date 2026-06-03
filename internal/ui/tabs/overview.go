@@ -1,11 +1,11 @@
 package tabs
 
 import (
+	"image/color"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
@@ -13,7 +13,7 @@ import (
 )
 
 // RenderOverview renders the overview tab
-func RenderOverview(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, su, w, a, t, mu, bg, p, b compat.AdaptiveColor, availHeight int) string {
+func RenderOverview(s *data.AppState, container, titleStyle, labelStyle, valueStyle lipgloss.Style, su, w, a, t, mu, bg, p, b color.Color, availHeight int) string {
 	width := s.UI.Width
 	cols := 1
 	if width >= 80 {

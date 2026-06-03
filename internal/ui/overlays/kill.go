@@ -2,16 +2,16 @@ package overlays
 
 import (
 	"fmt"
+	"image/color"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/input"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 )
 
 // RenderKillDialog renders the kill confirmation dialog using AppState
-func RenderKillDialog(s *data.AppState, b, p, danger, t, mu, bg compat.AdaptiveColor, zoneManager input.ZoneManager) string {
+func RenderKillDialog(s *data.AppState, b, p, danger, t, mu, bg color.Color, zoneManager input.ZoneManager) string {
 	boxWidth := min(data.KillDialogDefaultWidth, s.UI.Width-4)
 
 	isHoverYes := zoneManager.IsHovered("kill-yes")

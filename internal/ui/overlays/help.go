@@ -1,6 +1,8 @@
 package overlays
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
 
@@ -8,7 +10,7 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 )
 
-func RenderHelp(s *data.AppState, b, p, bg compat.AdaptiveColor) string {
+func RenderHelp(s *data.AppState, b, p, bg color.Color) string {
 	sec := lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#1E40AF"), Dark: lipgloss.Color("#3B82F6")}).Bold(true).MarginTop(1)
 	key := lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#047857"), Dark: lipgloss.Color("#10B981")}).Bold(true)
 	desc := lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#6B7280"), Dark: lipgloss.Color("#9CA3AF")})

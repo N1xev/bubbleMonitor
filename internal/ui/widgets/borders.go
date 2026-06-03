@@ -1,10 +1,10 @@
 package widgets
 
 import (
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/util"
 )
@@ -34,7 +34,7 @@ func GetBorder(borderStyle, borderType string) lipgloss.Border {
 }
 
 // RenderTopBorderWithBg renders a top border with title
-func RenderTopBorderWithBg(title string, width int, border lipgloss.Border, borderColor, titleColor compat.AdaptiveColor) string {
+func RenderTopBorderWithBg(title string, width int, border lipgloss.Border, borderColor, titleColor color.Color) string {
 	borderStyle := lipgloss.NewStyle().Foreground(borderColor)
 	titleStyle := lipgloss.NewStyle().Foreground(titleColor).Bold(true)
 
@@ -73,7 +73,7 @@ func RenderTopBorderWithBg(title string, width int, border lipgloss.Border, bord
 // RenderScrollbar renders a vertical scrollbar on the right side of a container.
 // Returns a string with scrollbar characters: "▄" for scroll position, "│" for track, " " for empty.
 // Only shows if totalItems > visibleItems (there's more content to scroll).
-func RenderScrollbar(totalItems, visibleItems, scrollOffset int, color compat.AdaptiveColor) string {
+func RenderScrollbar(totalItems, visibleItems, scrollOffset int, color color.Color) string {
 	// Don't show scrollbar if all items fit
 	if totalItems <= visibleItems {
 		return ""
@@ -114,7 +114,7 @@ func RenderScrollbar(totalItems, visibleItems, scrollOffset int, color compat.Ad
 // RenderScrollbarColumn renders a vertical scrollbar as a fixed-width column.
 // Unlike RenderScrollbar which merges with content lines, this renders a separate
 // column that can be joined horizontally with content.
-func RenderScrollbarColumn(totalItems, visibleItems, scrollOffset int, width int, color compat.AdaptiveColor) string {
+func RenderScrollbarColumn(totalItems, visibleItems, scrollOffset int, width int, color color.Color) string {
 	if totalItems <= visibleItems {
 		return ""
 	}

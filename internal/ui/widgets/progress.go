@@ -1,8 +1,9 @@
 package widgets
 
 import (
+	"image/color"
+
 	"charm.land/bubbles/v2/progress"
-	"charm.land/lipgloss/v2/compat"
 )
 
 // Pre-configured progress model with exact same characters as original implementation
@@ -13,7 +14,7 @@ var progressBar = progress.New(
 )
 
 // GetColorForValue returns a color based on the value threshold
-func GetColorForValue(val float64, su, w, a compat.AdaptiveColor) compat.AdaptiveColor {
+func GetColorForValue(val float64, su, w, a color.Color) color.Color {
 	if val < ProgressBarWarningThreshold {
 		return su
 	} else if val < ProgressBarCriticalThreshold {
@@ -24,7 +25,7 @@ func GetColorForValue(val float64, su, w, a compat.AdaptiveColor) compat.Adaptiv
 
 // RenderProgressBar creates a colored progress bar using Bubbles progress.Model
 // Maintains exact same visual output as original implementation
-func RenderProgressBar(val float64, width int, su, w, a compat.AdaptiveColor) string {
+func RenderProgressBar(val float64, width int, su, w, a color.Color) string {
 	if val < 0 {
 		val = 0
 	}
@@ -36,11 +37,9 @@ func RenderProgressBar(val float64, width int, su, w, a compat.AdaptiveColor) st
 	progressBar.SetWidth(width)
 
 	// Set colors based on value thresholds
-	// AdaptiveColor.Dark is a color.Color, and lipgloss.Color IS color.Color
-	// So we can use type assertion
-	color := GetColorForValue(val, su, w, a)
-	progressBar.FullColor = color.Dark
-	progressBar.EmptyColor = color.Light
+	c := GetColorForValue(val, su, w, a)
+	progressBar.FullColor = c
+	progressBar.EmptyColor = c
 
 	// ViewAs renders at the given percentage without needing Update cycle
 	// Dividing by 100 because ViewAs expects 0.0-1.0 range

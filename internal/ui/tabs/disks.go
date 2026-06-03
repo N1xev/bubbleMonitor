@@ -1,8 +1,9 @@
 package tabs
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
@@ -10,7 +11,7 @@ import (
 )
 
 // RenderDisks renders the disk partitions tab
-func RenderDisks(s *data.AppState, container lipgloss.Style, su, w, a, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
+func RenderDisks(s *data.AppState, container lipgloss.Style, su, w, a, t, mu, p, b color.Color, availHeight int) string {
 	if len(s.Metrics.DiskPartitions) == 0 {
 		return "Loading disk information..."
 	}

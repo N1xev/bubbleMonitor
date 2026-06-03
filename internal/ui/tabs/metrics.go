@@ -1,10 +1,10 @@
 package tabs
 
 import (
+	"image/color"
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
@@ -50,7 +50,7 @@ func (s *SumAccessor) Max() float64 {
 }
 
 // RenderMetrics renders the metrics/charts tab
-func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t, mu, p, b compat.AdaptiveColor, availHeight int) string {
+func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t, mu, p, b color.Color, availHeight int) string {
 	width := app.UI.Width
 
 	coreCols := 1
@@ -100,7 +100,7 @@ func RenderMetrics(app *data.AppState, container lipgloss.Style, su, w, a, s, t,
 
 	chartWidths := util.CalculateColumnWidths(width, chartCols)
 
-	renderChart := func(data data.Accessor, chartW, chartH int, c1, c2 compat.AdaptiveColor, fixedMax float64) string {
+	renderChart := func(data data.Accessor, chartW, chartH int, c1, c2 color.Color, fixedMax float64) string {
 		switch app.UI.ChartType {
 		case "line":
 			return widgets.RenderLineChart(data, chartW, chartH, c1, c2, fixedMax, app.Config.Theme)

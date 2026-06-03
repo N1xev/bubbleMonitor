@@ -1,6 +1,8 @@
 package overlays
 
 import (
+	"image/color"
+
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
 
@@ -8,7 +10,7 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 )
 
-func RenderSamLab(s *data.AppState, p, b, bg compat.AdaptiveColor) string {
+func RenderSamLab(s *data.AppState, p, b, bg color.Color) string {
 	border := widgets.GetBorder(s.Config.BorderStyle, s.Config.BorderType)
 
 	overlayWidth := data.SamLabDefaultWidth
