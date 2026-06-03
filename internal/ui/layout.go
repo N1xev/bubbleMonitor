@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 	"time"
 
@@ -17,6 +18,11 @@ import (
 	"github.com/N1xev/bubbleMonitor/internal/ui/tabs"
 	"github.com/N1xev/bubbleMonitor/internal/ui/widgets"
 )
+
+func isNoColor(c color.Color) bool {
+	_, ok := c.(lipgloss.NoColor)
+	return ok
+}
 
 const sidePadding = 2
 
@@ -135,10 +141,8 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 
 		v.AltScreen = true
 
-		if s.Config.BackgroundOpaque {
+		if s.Config.BackgroundOpaque && !isNoColor(bg) {
 			v.BackgroundColor = bg
-		} else {
-			v.BackgroundColor = lipgloss.NoColor{}
 		}
 
 		return v
@@ -1025,10 +1029,8 @@ func MainViewFromState(s *data.AppState, getBorder func() lipgloss.Border, getCo
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeAllMotion
 
-	if s.Config.BackgroundOpaque {
+	if s.Config.BackgroundOpaque && !isNoColor(bg) {
 		v.BackgroundColor = bg
-	} else {
-		v.BackgroundColor = lipgloss.NoColor{}
 	}
 
 	s.UI.Zones = zoneManager.GetZones()
