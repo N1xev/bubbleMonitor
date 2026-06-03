@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// Verify all 9 style fields produce styled output (non-zero lipgloss.Style)
@@ -39,7 +39,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestCheckSymbols(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	if !strings.Contains(s.CheckOK, "\u2713") {
@@ -65,7 +65,7 @@ func TestCheckSymbols(t *testing.T) {
 }
 
 func TestNewStoresPalette(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// Verify the unexported palette is accessible via BarColor returning a non-zero style
@@ -78,7 +78,7 @@ func TestNewStoresPalette(t *testing.T) {
 }
 
 func TestLabelUsesMutedColor(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	rendered := s.Label.Render("test")
@@ -88,7 +88,7 @@ func TestLabelUsesMutedColor(t *testing.T) {
 }
 
 func TestOKIsBold(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	rendered := s.OK.Render("test")
@@ -99,7 +99,7 @@ func TestOKIsBold(t *testing.T) {
 }
 
 func TestHeaderIsBoldAndUnderlined(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	rendered := s.Header.Render("test")
@@ -109,7 +109,7 @@ func TestHeaderIsBoldAndUnderlined(t *testing.T) {
 }
 
 func TestDimIsFaint(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	rendered := s.Dim.Render("test")
@@ -119,7 +119,7 @@ func TestDimIsFaint(t *testing.T) {
 }
 
 func TestActiveIsBold(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	rendered := s.Active.Render("test")
@@ -129,7 +129,7 @@ func TestActiveIsBold(t *testing.T) {
 }
 
 func TestBarColor(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// pct=50 -> Success (default)
@@ -152,7 +152,7 @@ func TestBarColor(t *testing.T) {
 }
 
 func TestBarColorBoundaries(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// Exact boundary: pct=60 -> Warning
@@ -169,7 +169,7 @@ func TestBarColorBoundaries(t *testing.T) {
 }
 
 func TestScoreColor(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// score=80 -> Success (>=70)
@@ -192,7 +192,7 @@ func TestScoreColor(t *testing.T) {
 }
 
 func TestScoreColorBoundaries(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// Exact boundary: score=70 -> Success
@@ -209,7 +209,7 @@ func TestScoreColorBoundaries(t *testing.T) {
 }
 
 func TestRenderBar(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// pct=50, width=10: 5 filled + 5 empty
@@ -235,7 +235,7 @@ func TestRenderBar(t *testing.T) {
 }
 
 func TestRenderBarOver100(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// pct=150, width=10: should cap at 10 filled blocks, no empty
@@ -246,7 +246,7 @@ func TestRenderBarOver100(t *testing.T) {
 }
 
 func TestVisualPad(t *testing.T) {
-	palette := ui.GetTheme("dark")
+	palette := ui.GetTheme("charmtone")
 	s := cliout.New(palette)
 
 	// A styled string shorter than targetWidth should get padded

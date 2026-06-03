@@ -40,17 +40,17 @@ func makeTTYColor(ansi int) color.Color {
 }
 
 var themes = map[string]ThemePalette{
-	"light": {
-		Name:       "light",
-		Primary:    makeColor("#2563EB", "#60A5FA"),
-		Secondary:  makeColor("#7C3AED", "#A78BFA"),
-		Success:    makeColor("#059669", "#34D399"),
-		Warning:    makeColor("#D97706", "#FBBF24"),
-		Alert:      makeColor("#DC2626", "#F87171"),
-		Text:       makeColor("#1F2937", "#F3F4F6"),
-		Muted:      makeColor("#6B7280", "#9CA3AF"),
-		Border:     makeColor("#D1D5DB", "#374151"),
-		Background: makeColor("#FFFFFF", "#111827"),
+	"charmtone": {
+		Name:       "charmtone",
+		Primary:    makeColor("#5A56E0", "#7571F9"),
+		Secondary:  makeColor("#EE6FF8", "#EE6FF8"),
+		Success:    makeColor("#04B575", "#04B575"),
+		Warning:    makeColor("#04B575", "#ECFD65"),
+		Alert:      makeColor("#FF4672", "#ED567A"),
+		Text:       makeColor("#1A1A1A", "#dddddd"),
+		Muted:      makeColor("#A49FA5", "#777777"),
+		Border:     makeColor("#B2B2B2", "#4A4A4A"),
+		Background: makeColor("#FFFDF5", "#1A1A1A"),
 	},
 	"nord": {
 		Name:       "nord",
@@ -412,18 +412,6 @@ var themes = map[string]ThemePalette{
 		Border:     makeTTYColor(7),
 		Background: lipgloss.NoColor{},
 	},
-	"dark": {
-		Name:       "dark",
-		Primary:    makeColor("#1D4ED8", "#3B82F6"),
-		Secondary:  makeColor("#6D28D9", "#8B5CF6"),
-		Success:    makeColor("#047857", "#10B981"),
-		Warning:    makeColor("#B45309", "#F59E0B"),
-		Alert:      makeColor("#B91C1C", "#EF4444"),
-		Text:       makeColor("#1F2937", "#F9FAFB"),
-		Muted:      makeColor("#6B7280", "#9CA3AF"),
-		Border:     makeColor("#D1D5DB", "#4B5563"),
-		Background: makeColor("#FFFFFF", "#111827"),
-	},
 }
 
 // GetTheme returns the color palette for the given theme name
@@ -431,14 +419,14 @@ func GetTheme(name string) ThemePalette {
 	if t, ok := themes[name]; ok {
 		return t
 	}
-	return themes["dark"]
+	return themes["charmtone"]
 }
 
 // GetThemeFromCustom creates a ThemePalette from CustomThemeConfig.
 // Custom themes use the same hex value for both Light and Dark terminal backgrounds.
 func GetThemeFromCustom(custom *config.CustomThemeConfig) ThemePalette {
 	if custom == nil {
-		return GetTheme("dark")
+		return GetTheme("charmtone")
 	}
 	return ThemePalette{
 		Name:       "custom",

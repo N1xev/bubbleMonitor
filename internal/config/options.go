@@ -3,8 +3,8 @@ package config
 // GetThemeNames returns available theme names
 func GetThemeNames() []string {
 	return []string{
-		"dark",
-		"light",
+		"charmtone",
+		"tty",
 		"nord",
 		"dracula",
 		"gruvbox",
