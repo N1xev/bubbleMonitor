@@ -172,7 +172,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(config.WatchConfig(m.Config.LastConfigModTime), handlers.AddToastCmd(fmt.Sprintf("Config Error: %v", err), data.ToastError))
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		m.renderCache.Force = true
 		return m, handlers.HandleKey(
 			&m.AppState,
@@ -182,6 +182,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.getFilteredProcessCount,
 			m.getVisibleProcessRows,
 		)
+	case tea.KeyReleaseMsg:
+		return m, nil
 
 	case messages.TickMsg:
 		if m.Metrics.AlertManager != nil {
@@ -426,15 +428,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, nic := range msg.Interfaces {
 			m.Metrics.LastNetworkInterfaces[nic.Name] = nic
 		}
+		m.renderCache.Force = true
 
 	case messages.BatteryMsg:
 		m.Metrics.Battery = msg
 	case messages.ServicesMsg:
 		m.Process.Services = msg
+		m.renderCache.Force = true
 	case messages.ConnectionsMsg:
 		m.Process.Connections = msg
+		m.renderCache.Force = true
 	case messages.SysLogMsg:
 		m.Process.SystemLogs = msg
+		m.renderCache.Force = true
 	case messages.RemoteMsg:
 		m.Remote.Metrics[msg.Host] = msg.Metrics
 	}
