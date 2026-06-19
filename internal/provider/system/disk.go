@@ -1,57 +1,63 @@
 package system
 
 import (
-	"os/exec"
-	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/jaypipes/ghw"
 	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 	"github.com/N1xev/bubbleMonitor/internal/msg"
 )
 
-// DiskInfoCmd fetches disk partition information
+// DiskInfoCmd fetches disk partition information from two sources:
+//   1. gopsutil's disk.Partitions() — mounted filesystems with usage data.
+//   2. ghw's block.New() — every block device and partition on the host,
+//      including unmounted ones, swap partitions, and Windows/LUKS volumes.
+//
+// The two sources are merged into a single list: gopsutil entries win for
+// partitions it already saw (because we have real usage data for them);
+// ghw adds the partitions gopsutil didn't see. Swap usage is then enriched
+// from mem.SwapMemory() because neither source reports swap usage directly
+// on Linux.
 func DiskInfoCmd() tea.Cmd {
 	return func() tea.Msg {
 		partitions, err := disk.Partitions(false)
 		var diskList []data.DiskPartition
 
-		// First pass: add all partitions with mountpoints
-		mountpointSeen := make(map[string]bool)
+		seen := make(map[string]bool)
 		for _, p := range partitions {
-			if p.Mountpoint != "" {
-				mountpointSeen[p.Mountpoint] = true
-				usage, usageErr := disk.Usage(p.Mountpoint)
-				if usageErr != nil {
-					diskList = append(diskList, data.DiskPartition{
-						Mountpoint: p.Mountpoint,
-						Device:     p.Device,
-						Fstype:     p.Fstype,
-						Total:      0,
-						Used:       0,
-						UsedPct:    0,
-					})
-					continue
-				}
-				diskList = append(diskList, data.DiskPartition{
-					Mountpoint: p.Mountpoint,
-					Device:     p.Device,
-					Fstype:     p.Fstype,
-					Total:      usage.Total,
-					Used:       usage.Used,
-					UsedPct:    usage.UsedPercent,
-				})
+			if p.Mountpoint == "" {
+				continue
 			}
+			seen[p.Device] = true
+			usage, usageErr := disk.Usage(p.Mountpoint)
+			entry := data.DiskPartition{
+				Mountpoint: p.Mountpoint,
+				Device:     p.Device,
+				Fstype:     p.Fstype,
+				Kind:       classifyKind(p.Fstype, p.Mountpoint),
+			}
+			if usageErr == nil {
+				entry.Total = usage.Total
+				entry.Used = usage.Used
+				entry.UsedPct = usage.UsedPercent
+			} else {
+				entry.UsedPct = -1
+			}
+			diskList = append(diskList, entry)
 		}
 
-		// Second pass: use lsblk to get unmounted partitions
-		cmd := exec.Command("lsblk", "-b", "-o", "NAME,SIZE,TYPE,MOUNTPOINT", "-J")
-		out, cmdErr := cmd.Output()
-		if cmdErr == nil {
-			parseLsblkUnmounted(string(out), &diskList)
-		}
+		// Add partitions ghw discovered but gopsutil didn't report.
+		// ghw works without root on Linux/macOS/Windows and reads partition
+		// tables directly — no external binaries like lsblk needed.
+		enumerateBlockDevices(&diskList, seen)
+
+		// Neither gopsutil nor ghw reports real swap usage on Linux, so
+		// fill it in from the OS-level swap stats.
+		enrichSwapFromOS(&diskList)
 
 		return msg.DiskInfoMsg{
 			Partitions: diskList,
@@ -60,62 +66,82 @@ func DiskInfoCmd() tea.Cmd {
 	}
 }
 
-func parseLsblkUnmounted(jsonOutput string, diskList *[]data.DiskPartition) {
-	// Simple JSON parsing for lsblk output
-	// Format: {"blockdevices":[{"name":"sda","size":...,"type":"disk","mountpoint":null,...},...]}
-	lines := strings.Split(jsonOutput, "\n")
-	var currentName string
-	var currentSize uint64
-	var currentType string
-	var currentMountpoint string
+// classifyKind returns a Kind for a partition based on its data:
+//   "swap"   – fstype or mountpoint identifies it as swap
+//   "part"   – has a filesystem (or no fs) but isn't actively mounted
+//   "mounted" – has a real filesystem mountpoint
+func classifyKind(fstype, mountpoint string) string {
+	if fstype == "swap" || mountpoint == "[swap]" || mountpoint == "[SWAP]" {
+		return "swap"
+	}
+	if mountpoint == "" {
+		return "part"
+	}
+	return "mounted"
+}
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, `"name":`) {
-			currentName = strings.Trim(strings.TrimSpace(strings.Split(line, ":")[1]), `" ,`)
-			currentSize = 0
-			currentType = ""
-		} else if strings.HasPrefix(line, `"size":`) {
-			sizeStr := strings.Trim(strings.TrimSpace(strings.Split(line, ":")[1]), `" ,`)
-			if sizeStr != "" && sizeStr != "0" {
-				if size, err := strconv.ParseUint(sizeStr, 10, 64); err == nil {
-					currentSize = size
-				}
+// enumerateBlockDevices walks ghw's block device tree and appends partitions
+// that gopsutil didn't already report. Parent block devices (sda, nvme0n1)
+// are skipped — only mountable partitions (ghw.Partition) make it in.
+func enumerateBlockDevices(diskList *[]data.DiskPartition, seen map[string]bool) {
+	info, err := ghw.Block()
+	if err != nil {
+		return
+	}
+	for _, disk := range info.Disks {
+		for _, part := range disk.Partitions {
+			if part == nil || part.SizeBytes == 0 {
+				continue
 			}
-		} else if strings.HasPrefix(line, `"type":`) {
-			currentType = strings.Trim(strings.TrimSpace(strings.Split(line, ":")[1]), `" ,`)
-		} else if strings.HasPrefix(line, `"mountpoint":`) {
-			mp := strings.TrimSpace(strings.Split(line, ":")[1])
-			if mp == "null" || mp == "" {
-				currentMountpoint = ""
-			} else {
-				currentMountpoint = strings.Trim(mp, `"`)
+			devicePath := devicePathFor(part.Name)
+			if seen[devicePath] {
+				continue
 			}
-
-			// When we finish parsing a device entry (next name or end)
-			// If it's a partition (type=part) with no mountpoint, add it
-			if currentType == "part" && currentMountpoint == "" && currentName != "" && currentSize > 0 {
-				devicePath := "/dev/" + currentName
-				// Check if already added
-				alreadySeen := false
-				for _, d := range *diskList {
-					if d.Device == devicePath {
-						alreadySeen = true
-						break
-					}
-				}
-				if !alreadySeen {
-					*diskList = append(*diskList, data.DiskPartition{
-						Mountpoint: "",
-						Device:     devicePath,
-						Fstype:     "",
-						Total:      currentSize,
-						Used:       0,
-						UsedPct:    0,
-					})
-				}
+			mountpoint := part.MountPoint
+			if mountpoint == "[SWAP]" {
+				mountpoint = "[swap]"
 			}
+			*diskList = append(*diskList, data.DiskPartition{
+				Mountpoint: mountpoint,
+				Device:     devicePath,
+				Fstype:     part.Type,
+				Total:      part.SizeBytes,
+				Used:       0,
+				UsedPct:    -1,
+				Kind:       classifyKind(part.Type, mountpoint),
+			})
 		}
+	}
+}
+
+// devicePathFor returns the full device path for a partition name. ghw reports
+// names as the basename (e.g. "sda1", "nvme0n1p2"); the host exposes the
+// partition under /dev/. This helper is a no-op when the name already
+// includes a path component.
+func devicePathFor(name string) string {
+	if name == "" {
+		return ""
+	}
+	if strings.HasPrefix(name, "/dev/") {
+		return name
+	}
+	return "/dev/" + name
+}
+
+// enrichSwapFromOS populates Used/UsedPct on any swap partition using the
+// OS-level swap stats, since gopsutil/ghw don't report swap usage on Linux.
+func enrichSwapFromOS(diskList *[]data.DiskPartition) {
+	swap, err := mem.SwapMemory()
+	if err != nil || swap.Total == 0 {
+		return
+	}
+	for i := range *diskList {
+		dp := &(*diskList)[i]
+		if dp.Kind != "swap" || dp.UsedPct >= 0 {
+			continue
+		}
+		dp.Used = swap.Used
+		dp.UsedPct = swap.UsedPercent
 	}
 }
 

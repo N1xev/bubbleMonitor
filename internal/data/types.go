@@ -34,6 +34,12 @@ type DiskPartition struct {
 	Total      uint64
 	Used       uint64
 	UsedPct    float64
+	// Kind classifies the partition so the UI can group them accurately:
+	//   "mounted" – has a real filesystem mountpoint
+	//   "swap"    – mountpoint is "[swap]"
+	//   "disk"    – whole block device (no partition table children)
+	//   "part"    – unmounted partition
+	Kind string
 }
 
 type GpuInfo struct {

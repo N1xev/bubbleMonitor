@@ -210,64 +210,56 @@ func RenderSystem(s *data.AppState, container, titleStyle, labelStyle, valueStyl
 	cw = getContentWidth(idx)
 
 	diskUsageBlock := ""
+	var unmountedParts []data.DiskPartition
 
+	// The data layer (provider/system/disk.go) is responsible for putting
+	// real usage data on every partition that has it — mounted filesystems
+	// from gopsutil, swap enriched from OS-level stats, etc. Anything still
+	// showing UsedPct < 0 has no usage data available, so we render it as
+	// a compact row under "Unmounted".
 	for _, dp := range s.Metrics.DiskPartitions {
-		diskName := dp.Mountpoint
-		if diskName == "" {
-			diskName = dp.Device
+		if dp.UsedPct < 0 {
+			unmountedParts = append(unmountedParts, dp)
+			continue
 		}
-		diskType := dp.Fstype
+		name := dp.Mountpoint
+		if name == "" {
+			name = dp.Device
+		}
+		nameLine := labelStyle.Render(name) + sp(" ") + labelStyle.Render("("+dp.Fstype+")")
+		nameLine = util.PadRight(nameLine, cw)
+		bar := widgets.RenderProgressBar(dp.UsedPct, cw, su, w, a)
+		pctStr := util.FastPercent1(dp.UsedPct)
+		val := valueStyle.Foreground(widgets.GetColorForValue(dp.UsedPct, su, w, a)).Render(util.PadRight(pctStr, cw))
+		label := labelStyle.Render(util.FormatBytes(dp.Used)) + sp(" / ") + labelStyle.Render(util.FormatBytes(dp.Total))
+		labelLine := util.PadRight(label, cw)
+		entry := lipgloss.JoinVertical(lipgloss.Left, nameLine, labelLine, val, bar)
 
-		diskNameLine := labelStyle.Render(diskName) + sp(" ") + labelStyle.Render("("+diskType+")")
-		diskNameLine = util.PadRight(diskNameLine, cw)
+		if diskUsageBlock != "" {
+			diskUsageBlock += "\n"
+		}
+		diskUsageBlock += entry
+	}
 
-		diskBar := widgets.RenderProgressBar(dp.UsedPct, cw, su, w, a)
-		diskStr := util.FastPercent1(dp.UsedPct)
-		diskVal := valueStyle.Foreground(widgets.GetColorForValue(dp.UsedPct, su, w, a)).Render(util.PadRight(diskStr, cw))
-
-		diskLabel := labelStyle.Render(util.FormatBytes(dp.Used)) + sp(" / ") + labelStyle.Render(util.FormatBytes(dp.Total))
-		diskLine := util.PadRight(diskLabel, cw)
-
-		diskPart := lipgloss.JoinVertical(lipgloss.Left,
-			diskNameLine,
-			diskLine,
-			diskVal,
-			diskBar,
-		)
-
-		if diskUsageBlock == "" {
-			diskUsageBlock = diskPart
-		} else {
-			diskUsageBlock = diskUsageBlock + "\n" + diskPart
+	if len(unmountedParts) > 0 {
+		if diskUsageBlock != "" {
+			diskUsageBlock += "\n" + labelStyle.Render(strings.Repeat("─", cw))
+		}
+		diskUsageBlock += "\n" + labelStyle.Render("Unmounted")
+		for _, dp := range unmountedParts {
+			name := dp.Device
+			if name == "" {
+				name = dp.Mountpoint
+			}
+			diskUsageBlock += "\n" + labelStyle.Render("─ ") +
+				labelStyle.Render(util.PadRight(name, cw-12)) +
+				labelStyle.Render(util.FormatBytes(dp.Total))
 		}
 	}
 
 	// If no disks, show placeholder
 	if diskUsageBlock == "" {
 		diskUsageBlock = labelStyle.Render("No disks")
-	}
-
-	// Add swap to disks block
-	if s.Metrics.Swap > 0 && s.Metrics.SwapInfo != nil {
-		cw = getContentWidth(idx)
-		separator := strings.Repeat("─", cw)
-
-		swapBar := widgets.RenderProgressBar(s.Metrics.Swap, cw, su, w, a)
-		swapStr := util.FastPercent1(s.Metrics.Swap)
-		swapVal := valueStyle.Foreground(widgets.GetColorForValue(s.Metrics.Swap, su, w, a)).Render(util.PadRight(swapStr, cw))
-
-		swapLabel := labelStyle.Render(util.FormatBytes(s.Metrics.SwapInfo.Used)) + sp(" / ") + labelStyle.Render(util.FormatBytes(s.Metrics.SwapInfo.Total))
-		swapLine := util.PadRight(swapLabel, cw)
-
-		swapPart := lipgloss.JoinVertical(lipgloss.Left,
-			labelStyle.Render(separator),
-			labelStyle.Render("Swap"),
-			swapLine,
-			swapVal,
-			swapBar,
-		)
-
-		diskUsageBlock = diskUsageBlock + "\n" + swapPart
 	}
 
 	// Network (Index 5)
