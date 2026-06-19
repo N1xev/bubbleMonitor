@@ -78,7 +78,7 @@ func DefaultConfig() AppConfig {
 		ChartType:            "braille",
 		ViewType:             "normal",
 		SortBy:               "cpu",
-		Theme:                "horizon",
+		Theme:                "charmtone",
 		RefreshRate:          1000,
 		BorderType:           "rounded",
 		BorderStyle:          "single",
