@@ -11,7 +11,10 @@ import (
 
 func ConnectionsCmd() tea.Cmd {
 	return func() tea.Msg {
-		conns, err := net.Connections("all")
+		// "inet" = TCP + UDP only. "all" also returns unix domain sockets,
+		// which can be thousands on busy systems and made the connections
+		// tab take 1-2s to render.
+		conns, err := net.Connections("inet")
 		if err != nil {
 			return msg.ConnectionsMsg{}
 		}
