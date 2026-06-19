@@ -7,11 +7,14 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 
 	"github.com/N1xev/bubbleMonitor/internal/data"
 )
+
+const nvmlInitTimeout = 3 * time.Second
 
 var (
 	nvmlInitialized   bool
@@ -25,11 +28,26 @@ func ensureNVML() {
 			return
 		}
 		nvmlInitAttempted.Store(true)
-		ret := nvml.Init()
-		if ret != nvml.SUCCESS {
+
+		// nvml.Init() can block indefinitely when the NVIDIA driver is in a
+		// broken state (e.g. after suspend/resume, or when the kernel module
+		// is unresponsive). Bound the wait so a stuck driver doesn't hang
+		// the entire TUI startup.
+		done := make(chan nvml.Return, 1)
+		go func() {
+			done <- nvml.Init()
+		}()
+
+		select {
+		case ret := <-done:
+			if ret != nvml.SUCCESS {
+				nvmlInitialized = false
+			} else {
+				nvmlInitialized = true
+			}
+		case <-time.After(nvmlInitTimeout):
+			log.Printf("nvml.Init() timed out after %s; NVIDIA driver appears unresponsive", nvmlInitTimeout)
 			nvmlInitialized = false
-		} else {
-			nvmlInitialized = true
 		}
 	})
 }

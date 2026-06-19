@@ -3,11 +3,15 @@
 package system
 
 import (
+	"context"
 	"log"
 	"os/exec"
+	"time"
 
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 )
+
+const nvidiaSmiTimeout = 3 * time.Second
 
 func detectNvidia() {
 	defer func() {
@@ -25,7 +29,10 @@ func detectNvidia() {
 		}
 	}
 
-	cmd := exec.Command("nvidia-smi", "--query-gpu=index", "--format=csv,noheader")
+	// nvidia-smi can hang when the driver is unresponsive; bound the wait.
+	ctx, cancel := context.WithTimeout(context.Background(), nvidiaSmiTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=index", "--format=csv,noheader")
 	if out, err := cmd.Output(); err == nil && len(out) > 0 {
 		nvidiaDetected.Store(true)
 	}
